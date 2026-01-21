@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareLink - File Sharing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            background: #f5f5f5;
+            padding: 40px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ShareLink</h1>
+    <p>Simple and secure file sharing</p>
+    
+    <div class="container">
+        <h2>Welcome to ShareLink!</h2>
+        <p>Share files quickly and securely</p>
+        <a href="{{ url_for('upload') }}" style="display: inline-block; margin-top: 20px; padding: 12px 30px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">Upload a File</a>
+    </div>
+</body>
+</html>
