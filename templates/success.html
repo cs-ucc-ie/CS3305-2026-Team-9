@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Success - ShareLink</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #28a745;
+            text-align: center;
+        }
+        .container {
+            background: #f5f5f5;
+            padding: 40px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        .link-box {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border: 2px solid #28a745;
+        }
+        .share-link {
+            word-break: break-all;
+            font-size: 18px;
+            color: #007bff;
+            font-weight: bold;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #218838;
+        }
+        .secondary-btn {
+            background: #6c757d;
+        }
+        .secondary-btn:hover {
+            background: #545b62;
+        }
+        .file-info {
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>✓ File Uploaded Successfully!</h1>
+    
+    <div class="container">
+        <div class="file-info">
+            <h3>File Details:</h3>
+            <p><strong>Filename:</strong> {{ file_info.original_filename }}</p>
+            <p><strong>Size:</strong> {{ "%.2f"|format(file_info.file_size / 1024 / 1024) }} MB</p>
+            <p><strong>Uploaded:</strong> {{ file_info.upload_date }}</p>
+        </div>
+        
+        <h2>Share this link:</h2>
+        <div class="link-box">
+            <p class="share-link" id="shareLink">{{ request.url_root }}download/{{ token }}</p>
+        </div>
+        
+        <div style="text-align: center;">
+            <button onclick="copyLink()">📋 Copy Link</button>
+            <a href="{{ url_for('upload') }}"><button class="secondary-btn">Upload Another File</button></a>
+            <a href="{{ url_for('index') }}"><button class="secondary-btn">Back to Home</button></a>
+        </div>
+        
+        <p style="text-align: center; margin-top: 30px; color: #666;">
+            Share this link with anyone to let them download your file!
+        </p>
+    </div>
+
+    <script>
+        function copyLink() {
+            const linkText = document.getElementById('shareLink').textContent;
+            navigator.clipboard.writeText(linkText).then(() => {
+                alert('Link copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+    </script>
+</body>
+</html>
