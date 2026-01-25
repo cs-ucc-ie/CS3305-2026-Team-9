@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Web Development 2</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    </head>
+    <body>
+        <header>
+            {% if g.user %}
+                <p>User id: {{ g.user }}</p>
+                <p><a href="{{ url_for('logout') }}">logout</a></p>
+            {% else %}
+                <p><a href="{{ url_for('register') }}">register</a></p>
+                <p><a href="{{ url_for('login') }}">login</a></p>
+            {% endif %}
+        </header>
+
+        <main>
+        {% block main_content %}{% endblock %}
+        </main>
+    </body>
+</html>

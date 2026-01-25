@@ -13,6 +13,14 @@ def init_db():
     """Initialize the database with tables"""
     conn = get_db()
     cursor = conn.cursor()
+
+    # create user table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id TEXT PRIMARY KEY,
+            password TEXT NOT NULL
+        )
+                   ''')
     
     # Create files table
     cursor.execute('''

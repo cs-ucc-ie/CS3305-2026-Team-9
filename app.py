@@ -1,15 +1,96 @@
 import os
 import secrets
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, session, g
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from database import get_db, init_db
+from werkzeug.security import generate_password_hash, check_password_hash
+from forms import RegistrationForm, LoginForm
+from functools import wraps
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key')
+
+@app.before_request
+def logged_in_user():
+    g.user = session.get("user_id", None)
+    
+def login_required(view):
+    @wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if g.user is None:
+            return redirect(url_for("login", next=request.url))
+        return view(*args, **kwargs)
+    return wrapped_view
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if g.user:
+        return redirect(url_for("index"))
+    
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user_id = form.user_id.data
+        password = form.password.data
+
+        db = get_db()
+        clashing_user = db.execute(
+            """SELECT * FROM users WHERE user_id = ?;""",
+            (user_id,)
+        ).fetchone()
+
+        if clashing_user is not None:
+            form.user_id.errors.append("Username already exists")
+            db.close()
+        else:
+            db.execute(
+                """INSERT INTO users (user_id, password) VALUES (?, ?);""",
+                (user_id, generate_password_hash(password))
+            )
+            db.commit()
+            db.close()
+            return redirect(url_for("login"))
+    return render_template("register.html", form=form)
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if g.user:
+        return redirect(url_for("index"))
+
+    form = LoginForm()
+    if form.validate_on_submit():
+        user_id = form.user_id.data
+        password = form.password.data
+
+        db = get_db()
+        user = db.execute(
+            """SELECT * FROM users WHERE user_id = ?;""",
+            (user_id,)
+        ).fetchone()
+        db.close()
+
+        if user is None:
+            form.password.errors.append("No such user")
+        elif not check_password_hash(user["password"], password):
+            form.password.errors.append("incorrect password")
+        else:
+            session.clear()
+            session["user_id"] = user_id
+            next_page = request.args.get("next")
+            if not next_page:
+                next_page = url_for("index")
+            return redirect(next_page)
+    return render_template("login.html", form=form)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("index"))
+
+
 
 # Configuration
 UPLOAD_FOLDER = 'uploads'
@@ -36,10 +117,11 @@ def generate_token():
 # Homepage route
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('Reg_Log_index.html')
 
 # Upload route
 @app.route('/upload', methods=['GET', 'POST'])
+@login_required
 def upload():
     if request.method == 'POST':
         # Check if file was uploaded
@@ -85,6 +167,7 @@ def upload():
 
 # Upload success page - shows the shareable link
 @app.route('/success/<token>')
+@login_required
 def upload_success(token):
     db = get_db()
     file_info = db.execute('SELECT * FROM files WHERE share_token = ?', (token,)).fetchone()
@@ -98,6 +181,7 @@ def upload_success(token):
 
 # Download route
 @app.route('/download/<token>')
+@login_required
 def download(token):
     db = get_db()
     file_info = db.execute('SELECT * FROM files WHERE share_token = ?', (token,)).fetchone()

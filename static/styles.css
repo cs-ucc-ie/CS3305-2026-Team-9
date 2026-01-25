@@ -1,0 +1,206 @@
+/* ===== Reset / base ===== */
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #0b1220;
+  --card: #111a2e;
+  --card-2: #0f1730;
+  --text: #e6e8ef;
+  --muted: #a8b0c2;
+  --border: rgba(255, 255, 255, 0.10);
+
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+
+  --success: #22c55e;
+  --danger: #ef4444;
+
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --radius: 16px;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: radial-gradient(1200px 800px at 20% 0%, #15244a 0%, var(--bg) 55%);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* ===== Layout container ===== */
+main, .page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 28px 18px;
+}
+
+/* ===== Header (from base.html) ===== */
+header {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 18px 18px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+header p {
+  margin: 0;
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+}
+
+header a {
+  color: var(--text);
+  text-decoration: none;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+header a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+/* ===== Page content area (block main_content) ===== */
+h1 {
+  margin: 18px 0 10px;
+  font-size: 36px;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+
+p {
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+
+/* A “card” wrapper style you can use by adding <div class="card"> ... */
+.card {
+  margin-top: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+/* ===== Forms (register/login) ===== */
+form {
+  margin-top: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow);
+  max-width: 520px;
+}
+
+label {
+  display: block;
+  margin: 12px 0 6px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  outline: none;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+  border-color: rgba(59, 130, 246, 0.8);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.20);
+}
+
+input[type="submit"],
+button {
+  margin-top: 16px;
+  appearance: none;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--primary);
+  color: white;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+input[type="submit"]:hover,
+button:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+input[type="submit"]:active,
+button:active {
+  transform: translateY(0);
+}
+
+/* Errors printed by your templates */
+form br + * {
+  /* mild spacing help for your <br /> driven layout */
+  display: inline-block;
+}
+
+form .error,
+form span.error,
+form div.error {
+  color: #fecaca;
+}
+
+form ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+/* If your errors are just raw text, this helps a bit */
+form * {
+  word-break: break-word;
+}
+
+/* ===== General links inside content ===== */
+a {
+  color: #93c5fd;
+}
+
+a:hover {
+  color: #bfdbfe;
+}
+
+/* ===== Small helper class for centered content ===== */
+.center {
+  text-align: center;
+}
+
+/* ===== Responsive tweaks ===== */
+@media (max-width: 520px) {
+  h1 { font-size: 30px; }
+  header { flex-direction: column; align-items: flex-start; }
+  header p { flex-wrap: wrap; }
+  form { width: 100%; }
+}
