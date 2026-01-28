@@ -24,3 +24,13 @@ uploads/
 # OS
 .DS_Store
 Thumbs.db
+
+# Node modules - DO NOT COMMIT
+node_modules/
+
+# Electron build files
+dist/
+out/
+
+# Package locks (optional, but helps)
+package-lock.json
