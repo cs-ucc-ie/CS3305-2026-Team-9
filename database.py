@@ -24,17 +24,18 @@ def init_db():
     
     # Create files table
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS files (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            filename TEXT NOT NULL,
-            original_filename TEXT NOT NULL,
-            file_size INTEGER NOT NULL,
-            share_token TEXT UNIQUE NOT NULL,
-            upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            download_count INTEGER DEFAULT 0,
-            expiry_date TIMESTAMP NOT NULL
-        )
-    ''')
+    CREATE TABLE IF NOT EXISTS files (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT NOT NULL,
+        original_filename TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        share_token TEXT UNIQUE NOT NULL,
+        user_id TEXT NOT NULL,
+        upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        download_count INTEGER DEFAULT 0,
+        expiry_date TIMESTAMP NOT NULL
+    )
+''')
     
     conn.commit()
     conn.close()

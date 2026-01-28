@@ -160,10 +160,11 @@ def upload():
         
         # Save to database
         db = get_db()
+        user_id = session.get('user_id')  # Get current user
         db.execute(
-            'INSERT INTO files (filename, original_filename, file_size, share_token, expiry_date) VALUES (?, ?, ?, ?, ?)',
-            (saved_filename, original_filename, file_size, token, expiry_date)
-        )
+    'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date) VALUES (?, ?, ?, ?, ?, ?)',
+    (saved_filename, original_filename, file_size, token, user_id, expiry_date)
+)
         db.commit()
         db.close()
         
@@ -216,6 +217,59 @@ def download(token):
         as_attachment=True,
         download_name=file_info['original_filename']
     )
+
+
+
+
+# User Dashboard - view all uploaded files
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    user_id = session.get('user_id')
+    
+    db = get_db()
+    # Get all files uploaded by this user
+    files = db.execute(
+        'SELECT * FROM files WHERE user_id = ? ORDER BY upload_date DESC',
+        (user_id,)
+    ).fetchall()
+    db.close()
+    
+    return render_template('dashboard.html', files=files)
+
+# Delete file route
+@app.route('/delete/<token>', methods=['POST'])
+@login_required
+def delete_file(token):
+    user_id = session.get('user_id')
+    
+    db = get_db()
+    # Get the file info
+    file_info = db.execute(
+        'SELECT * FROM files WHERE share_token = ? AND user_id = ?',
+        (token, user_id)
+    ).fetchone()
+    
+    if file_info is None:
+        flash('File not found or you do not have permission to delete it', 'error')
+        db.close()
+        return redirect(url_for('dashboard'))
+    
+    # Delete the physical file
+    try:
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_info['filename'])
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception as e:
+        flash(f'Error deleting file: {str(e)}', 'error')
+    
+    # Delete from database
+    db.execute('DELETE FROM files WHERE share_token = ? AND user_id = ?', (token, user_id))
+    db.commit()
+    db.close()
+    
+    flash('File deleted successfully', 'success')
+    return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':
     app.run(debug=True)
