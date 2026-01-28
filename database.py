@@ -33,7 +33,8 @@ def init_db():
         user_id TEXT NOT NULL,
         upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         download_count INTEGER DEFAULT 0,
-        expiry_date TIMESTAMP NOT NULL
+        expiry_date TIMESTAMP NOT NULL,
+        password_hash TEXT
     )
 ''')
     

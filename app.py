@@ -154,16 +154,22 @@ def upload():
         file_size = os.path.getsize(filepath)
         
         # Get expiration time from form (in hours)
+        # Get expiration time from form (in hours)
         expiry_hours = int(request.form.get('expiry', 24))  # Default 24 hours
         expiry_date = datetime.now() + timedelta(hours=expiry_hours)
 
-        
+        # Get optional password from form
+        password = request.form.get('password', '').strip()
+        password_hash = None
+        if password:
+            password_hash = generate_password_hash(password)
+
         # Save to database
         db = get_db()
         user_id = session.get('user_id')  # Get current user
         db.execute(
-    'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date) VALUES (?, ?, ?, ?, ?, ?)',
-    (saved_filename, original_filename, file_size, token, user_id, expiry_date)
+    'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    (saved_filename, original_filename, file_size, token, user_id, expiry_date, password_hash)
 )
         db.commit()
         db.close()
@@ -187,7 +193,7 @@ def upload_success(token):
     
     return render_template('success.html', file_info=file_info, token=token)
 
-@app.route('/download/<token>')
+@app.route('/download/<token>', methods=['GET', 'POST'])
 @login_required
 def download(token):
     db = get_db()
@@ -205,6 +211,22 @@ def download(token):
         db.close()
         return redirect(url_for('index'))
     
+    # Check if password protected
+    if file_info['password_hash']:
+        # If GET request, show password form
+        if request.method == 'GET':
+            db.close()
+            return render_template('password_check.html', token=token)
+        
+        # If POST request, check password
+        if request.method == 'POST':
+            entered_password = request.form.get('password', '')
+            if not check_password_hash(file_info['password_hash'], entered_password):
+                flash('Incorrect password', 'error')
+                db.close()
+                return render_template('password_check.html', token=token)
+            # Password correct, continue to download
+    
     # Increment download count
     db.execute('UPDATE files SET download_count = download_count + 1 WHERE share_token = ?', (token,))
     db.commit()
@@ -217,7 +239,6 @@ def download(token):
         as_attachment=True,
         download_name=file_info['original_filename']
     )
-
 
 
 
