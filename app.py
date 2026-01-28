@@ -8,6 +8,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm, LoginForm
 from functools import wraps
 from datetime import datetime, timedelta
+import qrcode
+import io
+import base64
 
 # Load environment variables
 load_dotenv()
@@ -116,6 +119,27 @@ def generate_token():
     """Generate a unique random token for sharing"""
     return secrets.token_urlsafe(16)
 
+def generate_qr_code(url):
+    """Generate QR code as base64 string"""
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Convert to base64 for embedding in HTML
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    img_str = base64.b64encode(buffer.getvalue()).decode()
+    
+    return f"data:image/png;base64,{img_str}"
+
 # Homepage route
 @app.route('/')
 def index():
@@ -179,7 +203,6 @@ def upload():
     
     return render_template('upload.html')
 
-# Upload success page - shows the shareable link
 @app.route('/success/<token>')
 @login_required
 def upload_success(token):
@@ -191,7 +214,11 @@ def upload_success(token):
         flash('File not found', 'error')
         return redirect(url_for('index'))
     
-    return render_template('success.html', file_info=file_info, token=token)
+    # Generate QR code for the download link
+    download_url = request.url_root + 'download/' + token
+    qr_code = generate_qr_code(download_url)
+    
+    return render_template('success.html', file_info=file_info, token=token, qr_code=qr_code)
 
 @app.route('/download/<token>', methods=['GET', 'POST'])
 @login_required
