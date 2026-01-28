@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import qrcode
 import io
 import base64
+import zipfile
 
 # Load environment variables
 load_dotenv()
@@ -145,60 +146,83 @@ def generate_qr_code(url):
 def index():
     return render_template('Reg_Log_index.html')
 
-# Upload route
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
     if request.method == 'POST':
-        # Check if file was uploaded
-        if 'file' not in request.files:
-            flash('No file selected', 'error')
+        # Check if files were uploaded
+        if 'files' not in request.files:
+            flash('No files selected', 'error')
             return redirect(request.url)
         
-        file = request.files['file']
+        files = request.files.getlist('files')
         
-        # Check if filename is empty
-        if file.filename == '':
-            flash('No file selected', 'error')
+        # Check if any files were actually selected
+        if not files or files[0].filename == '':
+            flash('No files selected', 'error')
             return redirect(request.url)
         
-        # Check if file type is allowed
-        if not allowed_file(file.filename):
-            flash('File type not allowed', 'error')
-            return redirect(request.url)
-        
-        # Generate unique token and filename
+        # Generate unique token
         token = generate_token()
-        original_filename = secure_filename(file.filename)
-        saved_filename = f"{token}_{original_filename}"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], saved_filename)
+        user_id = session.get('user_id')
         
-        # Save the file
-        file.save(filepath)
-        file_size = os.path.getsize(filepath)
-        
-        # Get expiration time from form (in hours)
-        # Get expiration time from form (in hours)
-        expiry_hours = int(request.form.get('expiry', 24))  # Default 24 hours
+        # Get expiration time and password
+        expiry_hours = int(request.form.get('expiry', 24))
         expiry_date = datetime.now() + timedelta(hours=expiry_hours)
-
-        # Get optional password from form
         password = request.form.get('password', '').strip()
         password_hash = None
         if password:
             password_hash = generate_password_hash(password)
-
+        
+        # If single file, save normally
+        if len(files) == 1:
+            file = files[0]
+            
+            # Check if file type is allowed
+            if not allowed_file(file.filename):
+                flash('File type not allowed', 'error')
+                return redirect(request.url)
+            
+            original_filename = secure_filename(file.filename)
+            saved_filename = f"{token}_{original_filename}"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], saved_filename)
+            
+            file.save(filepath)
+            file_size = os.path.getsize(filepath)
+        
+        # If multiple files, create a zip
+        else:
+            # Create zip filename
+            original_filename = f"files_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+            saved_filename = f"{token}_{original_filename}"
+            zip_path = os.path.join(app.config['UPLOAD_FOLDER'], saved_filename)
+            
+            # Create zip file
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for file in files:
+                    if file and file.filename:
+                        # Check file type
+                        if not allowed_file(file.filename):
+                            flash(f'File type not allowed: {file.filename}', 'error')
+                            continue
+                        
+                        # Save to zip
+                        filename = secure_filename(file.filename)
+                        file_data = file.read()
+                        zipf.writestr(filename, file_data)
+            
+            file_size = os.path.getsize(zip_path)
+            flash(f'Created zip file with {len(files)} files', 'success')
+        
         # Save to database
         db = get_db()
-        user_id = session.get('user_id')  # Get current user
         db.execute(
-    'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    (saved_filename, original_filename, file_size, token, user_id, expiry_date, password_hash)
-)
+            'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            (saved_filename, original_filename, file_size, token, user_id, expiry_date, password_hash)
+        )
         db.commit()
         db.close()
         
-        # Redirect to success page with token
         return redirect(url_for('upload_success', token=token))
     
     return render_template('upload.html')
