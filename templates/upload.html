@@ -69,43 +69,194 @@
     <h1>ShareLink - Upload File</h1>
     
     <div class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="message {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        <!-- Upload Progress Bar (hidden by default) -->
+        <div id="progressContainer" style="display: none; margin: 20px 0;">
+            <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <h3 style="color: #333; margin-bottom: 20px;">Uploading Files...</h3>
+                <div style="background: #e0e0e0; border-radius: 10px; overflow: hidden; margin: 20px 0; height: 30px;">
+                    <div id="progressBar" style="height: 100%; background: linear-gradient(90deg, #007bff, #0056b3); width: 0%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">
+                        0%
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: #666; font-size: 14px;">
+                    <span><strong>Uploaded:</strong> <span id="uploadedSize">0 MB</span></span>
+                    <span><strong>Speed:</strong> <span id="uploadSpeed">0 MB/s</span></span>
+                    <span><strong>Total:</strong> <span id="totalSize">0 MB</span></span>
+                </div>
+            </div>
+        </div>
         
-        <form class="upload-form" method="POST" enctype="multipart/form-data">
-            <h2>Select a file to upload</h2>
-            <p>Allowed types: txt, pdf, images, zip, doc, docx</p>
-            <p>Max size: 100MB</p>
+        <!-- Upload Form -->
+        <div id="uploadForm">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="message {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
             
-            <input type="file" name="files" multiple required>
-            <p style="font-size: 14px; color: #666; margin: 5px 0;">You can select multiple files - they will be zipped together</p>
-            <br><br>
-
-<label for="expiry" style="display: block; margin: 10px 0;"><strong>Link expires in:</strong></label>
-<select name="expiry" id="expiry" style="padding: 10px; font-size: 16px; margin: 10px 0; border-radius: 5px;">
-    <option value="24">24 hours</option>
-    <option value="168">7 days</option>
-    <option value="720">30 days</option>
-</select>
-<br><br>
-
-<label for="password" style="display: block; margin: 20px 0 5px;"><strong>Password Protection (Optional):</strong></label>
-<input type="password" name="password" id="password" placeholder="Leave blank for no password" style="padding: 10px; width: 300px; border-radius: 5px; border: 1px solid #ddd;">
-<p style="font-size: 14px; color: #666; margin: 5px 0;">Set a password to protect this file. Anyone downloading will need to enter it.</p>
-
-<br><br>
-
-<button type="submit">Upload File</button>
-        </form>
-        
-        <p style="text-align: center; margin-top: 30px;">
-            <a href="{{ url_for('index') }}">← Back to Home</a>
-        </p>
+            <form class="upload-form" method="POST" enctype="multipart/form-data">
+                <h2>Select a file to upload</h2>
+                <p>Allowed types: txt, pdf, images, zip, doc, docx</p>
+                <p>Max size: 100MB</p>
+                
+<div id="dropZone" style="border: 3px dashed #007bff; border-radius: 10px; padding: 40px; margin: 20px 0; background: #f8f9fa; cursor: pointer; transition: all 0.3s ease;">
+    <div style="text-align: center;">
+        <p style="font-size: 48px; margin: 0;">📁</p>
+        <p style="font-size: 18px; font-weight: bold; color: #333; margin: 10px 0;">Drag & Drop Files Here</p>
+        <p style="font-size: 14px; color: #666;">or click to browse</p>
     </div>
+    <input type="file" name="files" id="fileInput" multiple required style="display: none;">
+</div>
+<p id="fileList" style="font-size: 14px; color: #666; margin: 10px 0; text-align: center;"></p>
+<p style="font-size: 14px; color: #666; margin: 5px 0; text-align: center;">You can select multiple files - they will be zipped together</p>
+                <br><br>
+
+                <label for="expiry" style="display: block; margin: 10px 0;"><strong>Link expires in:</strong></label>
+                <select name="expiry" id="expiry" style="padding: 10px; font-size: 16px; margin: 10px 0; border-radius: 5px;">
+                    <option value="24">24 hours</option>
+                    <option value="168">7 days</option>
+                    <option value="720">30 days</option>
+                </select>
+                <br><br>
+
+                <label for="password" style="display: block; margin: 20px 0 5px;"><strong>Password Protection (Optional):</strong></label>
+                <input type="password" name="password" id="password" placeholder="Leave blank for no password" style="padding: 10px; width: 300px; border-radius: 5px; border: 1px solid #ddd;">
+                <p style="font-size: 14px; color: #666; margin: 5px 0;">Set a password to protect this file. Anyone downloading will need to enter it.</p>
+
+                <br><br>
+
+                <button type="submit">Upload File</button>
+            </form>
+            
+            <p style="text-align: center; margin-top: 30px;">
+                <a href="{{ url_for('index') }}">← Back to Home</a>
+            </p>
+        </div>
+    </div>
+<script>
+// Drag and Drop functionality
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileList = document.getElementById('fileList');
+
+// Click to open file picker
+dropZone.addEventListener('click', () => {
+    fileInput.click();
+});
+
+// Prevent default drag behaviors
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+    document.body.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+// Highlight drop zone when dragging over it
+['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+        dropZone.style.background = '#e3f2fd';
+        dropZone.style.borderColor = '#0056b3';
+        dropZone.style.transform = 'scale(1.02)';
+    }, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+        dropZone.style.background = '#f8f9fa';
+        dropZone.style.borderColor = '#007bff';
+        dropZone.style.transform = 'scale(1)';
+    }, false);
+});
+
+// Handle dropped files
+dropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    fileInput.files = files;
+    updateFileList(files);
+}, false);
+
+// Handle selected files from file picker
+fileInput.addEventListener('change', (e) => {
+    updateFileList(e.target.files);
+});
+
+// Update file list display
+function updateFileList(files) {
+    if (files.length === 0) {
+        fileList.textContent = '';
+        return;
+    }
+    
+    if (files.length === 1) {
+        fileList.textContent = `Selected: ${files[0].name}`;
+    } else {
+        fileList.textContent = `Selected: ${files.length} files`;
+    }
+    fileList.style.color = '#28a745';
+    fileList.style.fontWeight = 'bold';
+}
+document.querySelector('.upload-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const progressContainer = document.getElementById('progressContainer');
+    const uploadForm = document.getElementById('uploadForm');
+    const progressBar = document.getElementById('progressBar');
+    const uploadedSize = document.getElementById('uploadedSize');
+    const uploadSpeed = document.getElementById('uploadSpeed');
+    const totalSize = document.getElementById('totalSize');
+    
+    // Show progress, hide form
+    progressContainer.style.display = 'block';
+    uploadForm.style.display = 'none';
+    
+    // Calculate total file size
+    const files = document.querySelector('input[type="file"]').files;
+    let totalBytes = 0;
+    for (let file of files) {
+        totalBytes += file.size;
+    }
+    totalSize.textContent = (totalBytes / 1024 / 1024).toFixed(2) + ' MB';
+    
+    const startTime = Date.now();
+    
+    // Use fetch instead of XMLHttpRequest
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    }).then(response => {
+        // Follow the redirect
+        window.location.href = response.url;
+    }).catch(error => {
+        alert('Upload failed. Please try again.');
+        progressContainer.style.display = 'none';
+        uploadForm.style.display = 'block';
+    });
+    
+    // Simulate progress for now (we'll make it real later if needed)
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 2;
+        if (progress >= 90) {
+            clearInterval(interval);
+        }
+        progressBar.style.width = progress + '%';
+        progressBar.textContent = Math.round(progress) + '%';
+        
+        const elapsedTime = (Date.now() - startTime) / 1000;
+        const uploadedBytes = (totalBytes * progress) / 100;
+        uploadedSize.textContent = (uploadedBytes / 1024 / 1024).toFixed(2) + ' MB';
+        const speed = (uploadedBytes / 1024 / 1024) / elapsedTime;
+        uploadSpeed.textContent = speed.toFixed(2) + ' MB/s';
+    }, 100);
+});
+</script>
 </body>
 </html>
