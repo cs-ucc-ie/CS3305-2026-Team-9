@@ -56,6 +56,11 @@
                             {% endif %}
                         </td>
                     <td style="padding: 12px;">
+
+    <a href="{{ url_for('preview', token=file.share_token) }}" 
+   style="padding: 6px 12px; background: var(--card-2); color: var(--text); text-decoration: none; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; margin-right: 5px; display: inline-block;">
+    👁️ Preview
+</a>
     <a href="{{ url_for('download', token=file.share_token) }}" 
        style="padding: 6px 12px; background: var(--primary); color: white; text-decoration: none; border-radius: 6px; font-size: 14px; margin-right: 5px; display: inline-block;">
         Download

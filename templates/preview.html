@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block main_content %}
+
+<h1>File Preview</h1>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+        <div>
+            <h2>{{ file_info.original_filename }}</h2>
+            <p style="margin: 5px 0;"><strong>Size:</strong> {{ "%.2f"|format(file_info.file_size / 1024 / 1024) }} MB</p>
+            <p style="margin: 5px 0;"><strong>Uploaded:</strong> {{ file_info.upload_date[:16] }}</p>
+            <p style="margin: 5px 0;"><strong>Downloads:</strong> {{ file_info.download_count }}</p>
+        </div>
+        
+        <div>
+            <a href="{{ url_for('download', token=token) }}" 
+               style="display: inline-block; padding: 12px 24px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                ⬇️ Download File
+            </a>
+        </div>
+    </div>
+    
+    <hr style="border: none; border-top: 1px solid var(--border); margin: 20px 0;">
+    
+    {% if is_image %}
+        <div style="text-align: center; padding: 20px; background: var(--card-2); border-radius: 8px;">
+            <img src="{{ url_for('serve_file', token=token) }}" 
+                 alt="{{ file_info.original_filename }}"
+                 style="max-width: 100%; max-height: 600px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+        </div>
+    
+    {% elif is_pdf %}
+        <div style="background: var(--card-2); border-radius: 8px; padding: 10px;">
+            <iframe src="{{ url_for('serve_file', token=token) }}" 
+                    style="width: 100%; height: 700px; border: none; border-radius: 8px;">
+            </iframe>
+        </div>
+    
+    {% else %}
+        <div style="text-align: center; padding: 60px 20px; background: var(--card-2); border-radius: 8px;">
+            <div style="font-size: 72px; margin-bottom: 20px;">
+                {% if file_ext == 'txt' %}
+                    📄
+                {% elif file_ext in ['doc', 'docx'] %}
+                    📝
+                {% elif file_ext in ['zip', 'rar'] %}
+                    📦
+                {% elif file_ext in ['mp3', 'wav'] %}
+                    🎵
+                {% elif file_ext in ['mp4', 'mov'] %}
+                    🎬
+                {% else %}
+                    📎
+                {% endif %}
+            </div>
+            <h3>Preview not available for this file type</h3>
+            <p style="color: var(--muted);">{{ file_ext.upper() }} files cannot be previewed in browser.</p>
+            <p style="margin-top: 20px;">
+                <a href="{{ url_for('download', token=token) }}" 
+                   style="display: inline-block; padding: 12px 24px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px;">
+                    Download to View
+                </a>
+            </p>
+        </div>
+    {% endif %}
+    
+    <p style="text-align: center; margin-top: 30px;">
+        <a href="{{ url_for('dashboard') }}" style="color: var(--primary);">← Back to Dashboard</a>
+    </p>
+</div>
+
+{% endblock %}

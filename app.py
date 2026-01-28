@@ -292,5 +292,67 @@ def delete_file(token):
     flash('File deleted successfully', 'success')
     return redirect(url_for('dashboard'))
 
+
+
+# File preview route
+@app.route('/preview/<token>', methods=['GET', 'POST'])
+@login_required
+def preview(token):
+    db = get_db()
+    file_info = db.execute('SELECT * FROM files WHERE share_token = ?', (token,)).fetchone()
+    
+    if file_info is None:
+        flash('File not found', 'error')
+        db.close()
+        return redirect(url_for('index'))
+    
+    # Check if link has expired
+    expiry_date = datetime.fromisoformat(file_info['expiry_date'])
+    if datetime.now() > expiry_date:
+        flash('This link has expired', 'error')
+        db.close()
+        return redirect(url_for('index'))
+    
+    # Check if password protected
+    if file_info['password_hash']:
+        if request.method == 'GET':
+            db.close()
+            return render_template('password_check.html', token=token, preview=True)
+        
+        if request.method == 'POST':
+            entered_password = request.form.get('password', '')
+            if not check_password_hash(file_info['password_hash'], entered_password):
+                flash('Incorrect password', 'error')
+                db.close()
+                return render_template('password_check.html', token=token, preview=True)
+    
+    db.close()
+    
+    # Determine if file is previewable
+    file_ext = file_info['original_filename'].rsplit('.', 1)[1].lower() if '.' in file_info['original_filename'] else ''
+    is_image = file_ext in ['jpg', 'jpeg', 'png', 'gif']
+    is_pdf = file_ext == 'pdf'
+    
+    return render_template('preview.html', file_info=file_info, token=token, 
+                          is_image=is_image, is_pdf=is_pdf, file_ext=file_ext)
+
+
+# Serve file for preview (images/PDFs)
+@app.route('/serve/<token>')
+@login_required
+def serve_file(token):
+    db = get_db()
+    file_info = db.execute('SELECT * FROM files WHERE share_token = ?', (token,)).fetchone()
+    db.close()
+    
+    if file_info is None:
+        return "File not found", 404
+    
+    # Serve the file (but not as attachment, so browser can display it)
+    return send_from_directory(
+        app.config['UPLOAD_FOLDER'],
+        file_info['filename']
+    )
+
 if __name__ == '__main__':
     app.run(debug=True)
