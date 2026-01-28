@@ -7,12 +7,14 @@ from database import get_db, init_db
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm, LoginForm
 from functools import wraps
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key')
+app.config['WTF_CSRF_ENABLED'] = False
 
 @app.before_request
 def logged_in_user():
@@ -151,11 +153,16 @@ def upload():
         file.save(filepath)
         file_size = os.path.getsize(filepath)
         
+        # Get expiration time from form (in hours)
+        expiry_hours = int(request.form.get('expiry', 24))  # Default 24 hours
+        expiry_date = datetime.now() + timedelta(hours=expiry_hours)
+
+        
         # Save to database
         db = get_db()
         db.execute(
-            'INSERT INTO files (filename, original_filename, file_size, share_token) VALUES (?, ?, ?, ?)',
-            (saved_filename, original_filename, file_size, token)
+            'INSERT INTO files (filename, original_filename, file_size, share_token, expiry_date) VALUES (?, ?, ?, ?, ?)',
+            (saved_filename, original_filename, file_size, token, expiry_date)
         )
         db.commit()
         db.close()
@@ -179,7 +186,6 @@ def upload_success(token):
     
     return render_template('success.html', file_info=file_info, token=token)
 
-# Download route
 @app.route('/download/<token>')
 @login_required
 def download(token):
@@ -188,6 +194,14 @@ def download(token):
     
     if file_info is None:
         flash('File not found or link expired', 'error')
+        db.close()
+        return redirect(url_for('index'))
+    
+    # Check if link has expired
+    expiry_date = datetime.fromisoformat(file_info['expiry_date'])
+    if datetime.now() > expiry_date:
+        flash('This link has expired', 'error')
+        db.close()
         return redirect(url_for('index'))
     
     # Increment download count

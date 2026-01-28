@@ -83,8 +83,17 @@
             <p>Max size: 100MB</p>
             
             <input type="file" name="file" required>
-            <br>
-            <button type="submit">Upload File</button>
+            <br><br>
+
+<label for="expiry" style="display: block; margin: 10px 0;"><strong>Link expires in:</strong></label>
+<select name="expiry" id="expiry" style="padding: 10px; font-size: 16px; margin: 10px 0; border-radius: 5px;">
+    <option value="24">24 hours</option>
+    <option value="168">7 days</option>
+    <option value="720">30 days</option>
+</select>
+<br><br>
+
+<button type="submit">Upload File</button>
         </form>
         
         <p style="text-align: center; margin-top: 30px;">
