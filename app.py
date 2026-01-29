@@ -300,14 +300,148 @@ def dashboard():
     user_id = session.get('user_id')
     
     db = get_db()
-    # Get all files uploaded by this user
+    
+    # files I uploaded
     files = db.execute(
-        'SELECT * FROM files WHERE user_id = ? ORDER BY upload_date DESC',
+        "SELECT * FROM files Where user_id = ? ORDER BY upload_date DESC",
         (user_id,)
     ).fetchall()
+
+    # Incoming friend requests
+    incoming_requests = db.execute(
+        "SELECT * FROM friends WHERE friend_id = ? AND status = 'pending'",
+        (user_id,)
+    ).fetchall()
+
+    # Outgoing friend requests 
+    outgoing_requests = db.execute(
+        "SELECT * FROM friends WHERE user_id = ? AND status = 'pending'",
+        (user_id,)
+    ).fetchall()
+
+    # Accepted friends
+    friends = db.execute(
+        """
+        SELECT * FROM friends
+        WHERE (user_id = ? OR friend_id = ?) AND status = 'accepted'
+        """,
+        (user_id, user_id)
+    ).fetchall()
+
+    # Files shared with me
+    shared_with_me = db.execute(
+        """
+        SELECT files.*, shared_files.sender_id
+        FROM shared_files
+        JOIN files ON shared_files.file_id = files.id
+        WHERE shared_files.receiver_id = ?
+        ORDER BY shared_files.shared_date DESC
+        """,
+        (user_id,)
+    ).fetchall()
+
     db.close()
+
+    return render_template(
+        "dashboard.html",
+        files=files,
+        friends=friends,
+        incoming_requests=incoming_requests,
+        outgoing_requests=outgoing_requests,
+        shared_with_me=shared_with_me
+    )
+
+# Add a friend
+@app.route('/add_friend', methods=['POST'])
+@login_required
+def add_friend():
+    user_id = session.get("user_id")
+    friend_id = request.form.get("friend_id")
+
+    if user_id == friend_id:
+        flash("You cannot add yourself", "error")
+        return redirect(url_for("dashboard"))
     
-    return render_template('dashboard.html', files=files)
+    db = get_db()
+
+    # Check if friends exist
+    friend = db.execute(
+        "SELECT * FROM users WHERE user_id = ?",
+        (friend_id,)
+    ).fetchone()
+
+    if friend is None:
+        flash("User does not exist", "error")
+        return redirect(url_for("dashboard"))
+    
+    # Check if friends exists
+    existing = db.execute(
+        "SELECT * FROM friends WHERE user_id = ? AND friend_id = ?",
+        (user_id, friend_id)
+    ).fetchone()
+
+    if existing:
+        flash("Friend request already sent or already friends", "error")
+        return redirect(url_for("dashboard"))
+
+    # Create pending request
+    db.execute(
+        "INSERT INTO friends (user_id, friend_id, status, requested_by) VALUES (?, ?, ?, ?)",
+        (user_id, friend_id, "pending", user_id)
+    )
+    db.commit()
+    db.close()
+
+    flash("Friend request sent", "success")
+    return redirect(url_for("dashboard"))
+
+@app.route("/accept_friend/<int:request_id>", methods=["POST"])
+@login_required
+def accept_friend(request_id):
+    user_id = session.get("user_id")
+    db = get_db()
+
+    db.execute(
+        "UPDATE friends SET status='accepted' WHERE id=? AND friend_id=?",
+        (request_id, user_id)
+    )
+    db.commit()
+    db.close()
+
+    flash("Friend request accepted", "success")
+    return redirect(url_for("dashboard"))
+
+@app.route("/decline_friend/<int:request_id>", methods=["POST"])
+@login_required
+def decline_friend(request_id):
+    user_id = session.get("user_id")
+    db = get_db()
+
+    db.execute(
+        "DELETE FROM friends WHERE id=? AND friend_id=?",
+        (request_id, user_id)
+    )
+    db.commit()
+    db.close()
+
+    flash("Friend request declined", "success")
+    return redirect(url_for("dashboard"))
+
+@app.route("/unfriend/<friend_id>", methods=["POST"])
+@login_required
+def unfriend(friend_id):
+    user_id = session.get("user_id")
+    db = get_db()
+
+    db.execute(
+        "DELETE FROM friends WHERE (user_id=? and friend_id=?) OR (user_id=? AND friend_id=?)",
+        (user_id, friend_id, friend_id, user_id)
+    )
+    db.commit()
+    db.close()
+
+    flash("Friend removed", "success")
+    return redirect(url_for("dashboard"))
 
 # Delete file route
 @app.route('/delete/<token>', methods=['POST'])
@@ -343,7 +477,33 @@ def delete_file(token):
     flash('File deleted successfully', 'success')
     return redirect(url_for('dashboard'))
 
+# Share a file with a friend
+@app.route("/share/<token>", methods=["POST"])
+@login_required
+def share_file(token):
+    sender_id = session.get("user_id")
+    receiver_id = request.form.get("friend_id")
 
+    db = get_db()
+
+    file = db.execute(
+        "SELECT * FROM files WHERE share_token = ? and user_id = ?",
+        (token, sender_id)
+    ).fetchone()
+
+    if file is None:
+        flash("You cannot share this file", "error")
+        return redirect(url_for("dashboard"))
+    
+    db.execute(
+        "INSERT INTO shared_files (file_id, sender_id, receiver_id) VALUES (?, ?, ?)",
+        (file["id"], sender_id, receiver_id)
+    )
+    db.commit()
+    db.close()
+
+    flash("File shared", "success")
+    return redirect(url_for("dashboard"))
 
 # File preview route
 @app.route('/preview/<token>', methods=['GET', 'POST'])

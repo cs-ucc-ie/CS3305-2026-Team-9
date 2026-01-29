@@ -38,6 +38,28 @@ def init_db():
     )
 ''')
     
+    # Add a friend table
+    cursor.execute(''' 
+    CREATE TABLE IF NOT EXISTS friends (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        friend_id TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        requested_by TEXT NOT NULL       
+    )
+    ''')
+
+    # Shared files table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS shared_files (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        file_id INTEGER NOT NULL,
+        sender_id TEXT NOT NULL,
+        receiver_id TEXT NOT NULL,
+        shared_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
+    
     conn.commit()
     conn.close()
     print("Database initialized successfully!")

@@ -1,14 +1,16 @@
 const { app, BrowserWindow } = require('electron');
 
 function createWindow() {
-  const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true
-    }
-  });
+const win = new BrowserWindow({
+  width: 1200,
+  height: 800,
+  webPreferences: {
+    nodeIntegration: false,
+    contextIsolation: true,
+    partition: 'persist:sharelink'
+  }
+});
+
   
   // Clear cache and load homepage
   win.webContents.session.clearCache();

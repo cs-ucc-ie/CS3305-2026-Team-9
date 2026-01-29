@@ -4,6 +4,69 @@
 
 <h1>My Dashboard</h1>
 
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Add a Friend</h2>
+    <form method="POST" action="{{ url_for('add_friend') }}">
+        <input type="text" name="friend_id" placeholder="Enter friend's username"
+        style="padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+        <button type="submit" style="padding: 8px 16px; background: var(--primary); color: white; border-radius: 6px;">Add Friend</button>
+    </form>
+</div>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Your Friends</h2>
+
+    {% if friends %}
+    <ul>
+        {% for f in friends %}
+            {% set friend = f.friend_id if f.user_id == g.user else f.user_id %}
+            <li>
+                {{ friend }}
+                <form method="POST" action="{{ url_for('unfriend', friend_id=friend) }}" style="display: inline;">
+                    <button type="submit" style="color: red;">Unfriend</button>
+                </form>
+            </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+        <p>You have no friends yet</p>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Friend Request</h2>
+
+    {% if incoming_requests %}
+        {% for req in incoming_requests %}
+            <p>
+                {{ req.user_id }} wants to be your friend
+                <form method="POST" action="{{ url_for('accept_friend', request_id=req.id) }}" style="display: inline;">
+                    <button type="submit">Accept</button>
+                </form>
+                <form method="POST" action="{{ url_for('decline_friend', request_id=req.id) }}" style="display: inline;">
+                    <button type="submit" style="color: red;">Decline</button>
+                </form>
+            </p>
+        {% endfor %}
+    {% else %}
+        <p>No incoming requests</p>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Requests You Sent</h2>
+
+    {% if outgoing_requests %}
+        <ul>
+            {% for req in outgoing_requests %}
+                <li>Waiting for {{ req.friend_id }} to accept</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>You haven't sent any requests</p>
+    {% endif %}
+</div>
+
 <p style="margin-bottom: 20px;">
     <a href="{{ url_for('upload') }}" style="display: inline-block; padding: 10px 20px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px;">Upload New File</a>
 </p>
@@ -74,6 +137,18 @@
             🗑️ Delete
         </button>
     </form>
+
+    <form method="POST" action = "{{ url_for('share_file', token=file['share_token']) }}" style="margin-top: 8px;">
+        <select name="friend_id" style="padding: 6px; border-radius: 6px; border: 1px solid var(--border);">
+            {% for friend in friends %}
+                <option value="{{ friend['friend_id'] }}">{{ friend['friend_id']}}</option>
+            {% endfor %}
+        </select>
+        <button type="submit"
+                style="padding: 6px 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 14px;">
+            Share
+        </button>
+    </form>
 </td>
                     </tr>
                     {% endfor %}
@@ -88,6 +163,27 @@
         <p><a href="{{ url_for('upload') }}" style="color: var(--primary);">Upload your first file →</a></p>
     </div>
 {% endif %}
+
+<div class="card" style="margin-top: 30px;">
+    <h2>Files Shared With Me</h2>
+
+    {% if shared_with_me %}
+        <ul>
+            {% for file in shared_with_me %}
+                <li style="margin-bottom: 10px;">
+                    <strong>{{ file.original_filename }}</strong>
+                    <em>(from {{ file.sender_id }})</em>
+                    -
+                    <a href="{{ url_for('download', token=file.share_token) }}" style="color: var(--primary);">
+                        Download
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+            <p>No one has shared files with you.</p>
+        {% endif %}
+</div>
 
 <script>
 function copyShareLink(link) {
