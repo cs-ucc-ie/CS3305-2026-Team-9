@@ -79,10 +79,8 @@ def login():
         ).fetchone()
         db.close()
 
-        if user is None:
-            form.password.errors.append("No such user")
-        elif not check_password_hash(user["password"], password+user["salt"]):
-            form.password.errors.append("incorrect password")
+        if user is None or not check_password_hash(user["password"], password+user["salt"]):
+            form.password.errors.append("Username or password incorrect")
         else:
             session.clear()
             session["user_id"] = user_id
