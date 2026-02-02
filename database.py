@@ -18,6 +18,7 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id TEXT PRIMARY KEY,
+            salt TEXT NOT NULL,
             password TEXT NOT NULL
         )
                    ''')
@@ -34,6 +35,7 @@ def init_db():
         upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         download_count INTEGER DEFAULT 0,
         expiry_date TIMESTAMP NOT NULL,
+        salt TEXT,
         password_hash TEXT
     )
 ''')

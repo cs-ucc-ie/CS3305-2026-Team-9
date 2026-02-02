@@ -40,6 +40,7 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         user_id = form.user_id.data
+        salt = str(base64.b64encode(os.urandom(32)))
         password = form.password.data
 
         db = get_db()
@@ -53,8 +54,8 @@ def register():
             db.close()
         else:
             db.execute(
-                """INSERT INTO users (user_id, password) VALUES (?, ?);""",
-                (user_id, generate_password_hash(password))
+                """INSERT INTO users (user_id, salt, password) VALUES (?, ?, ?);""",
+                (user_id, salt, generate_password_hash(password+salt))
             )
             db.commit()
             db.close()
@@ -80,7 +81,7 @@ def login():
 
         if user is None:
             form.password.errors.append("No such user")
-        elif not check_password_hash(user["password"], password):
+        elif not check_password_hash(user["password"], password+user["salt"]):
             form.password.errors.append("incorrect password")
         else:
             session.clear()
@@ -170,9 +171,11 @@ def upload():
         expiry_hours = int(request.form.get('expiry', 24))
         expiry_date = datetime.now() + timedelta(hours=expiry_hours)
         password = request.form.get('password', '').strip()
+        salt = None
         password_hash = None
         if password:
-            password_hash = generate_password_hash(password)
+            salt = str(base64.b64encode(os.urandom(32)))
+            password_hash = generate_password_hash(password+salt)
         
         # If single file, save normally
         if len(files) == 1:
@@ -217,8 +220,8 @@ def upload():
         # Save to database
         db = get_db()
         db.execute(
-            'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            (saved_filename, original_filename, file_size, token, user_id, expiry_date, password_hash)
+            'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, salt, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            (saved_filename, original_filename, file_size, token, user_id, expiry_date, salt, password_hash)
         )
         db.commit()
         db.close()
