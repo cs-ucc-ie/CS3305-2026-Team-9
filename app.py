@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from database import get_db, close_db, init_db
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_wtf.csrf import CSRFProtect
 from forms import RegistrationForm, LoginForm
 from functools import wraps
 from datetime import datetime, timedelta
@@ -21,6 +22,7 @@ app.secret_key = os.getenv('SECRET_KEY')
 if not app.secret_key:
     raise RuntimeError("SECRET_KEY environment variable is not set")
 app.config['WTF_CSRF_ENABLED'] = True
+csrf = CSRFProtect(app)
 
 @app.before_request
 def logged_in_user():
@@ -99,7 +101,7 @@ def logout():
 # Configuration
 UPLOAD_FOLDER = 'uploads'
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'doc', 'docx'}
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'doc', 'docx', 'mp3', 'mp4', 'wav', 'mov', 'avi', 'csv', 'xlsx', 'pptx'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
@@ -223,11 +225,14 @@ def upload():
             file_size = os.path.getsize(zip_path)
             flash(f'Created zip file with {len(files)} files', 'success')
         
+        # Check if file was encrypted client-side
+        is_encrypted = request.form.get('is_encrypted', '0') == '1'
+
         # Save to database
         db = get_db()
         db.execute(
-            'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, salt, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            (saved_filename, original_filename, file_size, token, user_id, expiry_date, salt, password_hash)
+            'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, salt, password_hash, is_encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            (saved_filename, original_filename, file_size, token, user_id, expiry_date, salt, password_hash, is_encrypted)
         )
         db.commit()
 
@@ -290,8 +295,11 @@ def download(token):
     db.execute('UPDATE files SET download_count = download_count + 1 WHERE share_token = ?', (token,))
     db.commit()
 
-    
-    # Send the file
+    # For encrypted files, render client-side decryption page
+    if file_info['is_encrypted']:
+        return render_template('download_encrypted.html', file_info=file_info, token=token)
+
+    # Send the file directly for non-encrypted files
     return send_from_directory(
         app.config['UPLOAD_FOLDER'],
         file_info['filename'],
@@ -589,8 +597,9 @@ def serve_file(token):
     if datetime.now() > expiry_date:
         return "This link has expired", 403
 
-    # Block serving if file is password-protected (must use preview flow)
-    if file_info['password_hash']:
+    # Block serving if file is password-protected and not encrypted
+    # (encrypted files need to be served for client-side decryption after password check)
+    if file_info['password_hash'] and not file_info['is_encrypted']:
         return "This file is password protected", 403
 
     # Serve the file (but not as attachment, so browser can display it)

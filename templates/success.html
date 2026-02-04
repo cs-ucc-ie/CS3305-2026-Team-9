@@ -79,9 +79,12 @@
             <p><strong>Uploaded:</strong> {{ file_info.upload_date }}</p>
             <p><strong>Expires:</strong> {{ file_info.expiry_date }}</p>
 {% if file_info.password_hash %}
-<p><strong>Password:</strong> 🔒 Protected</p>
+<p><strong>Password:</strong> Protected</p>
 {% else %}
 <p><strong>Password:</strong> None (public link)</p>
+{% endif %}
+{% if file_info.is_encrypted %}
+<p><strong>Encryption:</strong> End-to-End Encrypted (AES-256-GCM)</p>
 {% endif %}
         </div>
         
@@ -91,10 +94,20 @@
         </div>
 
         <h2 style="margin-top: 30px;">Or scan QR code:</h2>
-<div style="text-align: center; padding: 20px; background: white; border-radius: 10px; margin: 20px 0;">
+<div id="qrContainer" style="text-align: center; padding: 20px; background: white; border-radius: 10px; margin: 20px 0;">
+    {% if file_info.is_encrypted %}
+    <canvas id="qrCanvas"></canvas>
+    {% else %}
     <img src="{{ qr_code }}" alt="QR Code" style="max-width: 250px; width: 100%;">
+    {% endif %}
     <p style="color: #666; margin-top: 10px; font-size: 14px;">Scan with your phone to download</p>
 </div>
+
+{% if file_info.is_encrypted %}
+<div style="padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; margin: 15px 0;">
+    <p style="margin: 0; color: #856404;"><strong>Important:</strong> This file is end-to-end encrypted. The decryption key is embedded in the link above. Save this link — the key cannot be recovered if lost.</p>
+</div>
+{% endif %}
         
         <div style="text-align: center;">
             <button onclick="copyLink()">📋 Copy Link</button>
@@ -107,7 +120,27 @@
         </p>
     </div>
 
+    {% if file_info.is_encrypted %}
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    {% endif %}
     <script>
+        // If encrypted, append the key fragment to the share link
+        (function() {
+            const keyFragment = window.location.hash;
+            if (keyFragment && keyFragment.length > 1) {
+                const shareLink = document.getElementById('shareLink');
+                shareLink.textContent = shareLink.textContent + keyFragment;
+
+                // Generate QR code client-side with the full URL (including key)
+                const qrCanvas = document.getElementById('qrCanvas');
+                if (qrCanvas && typeof QRCode !== 'undefined') {
+                    QRCode.toCanvas(qrCanvas, shareLink.textContent, { width: 250 }, function(err) {
+                        if (err) console.error('QR generation error:', err);
+                    });
+                }
+            }
+        })();
+
         function copyLink() {
             const linkText = document.getElementById('shareLink').textContent;
             navigator.clipboard.writeText(linkText).then(() => {

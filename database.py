@@ -45,7 +45,8 @@ def init_db():
         download_count INTEGER DEFAULT 0,
         expiry_date TIMESTAMP NOT NULL,
         salt TEXT,
-        password_hash TEXT
+        password_hash TEXT,
+        is_encrypted BOOLEAN DEFAULT 0
     )
 ''')
     
@@ -71,6 +72,12 @@ def init_db():
     )
     ''')
     
+    # Migration: add is_encrypted column to existing databases
+    try:
+        cursor.execute('ALTER TABLE files ADD COLUMN is_encrypted BOOLEAN DEFAULT 0')
+    except Exception:
+        pass  # Column already exists
+
     conn.commit()
     conn.close()
     print("Database initialized successfully!")

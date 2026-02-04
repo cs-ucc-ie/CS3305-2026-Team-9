@@ -16,9 +16,14 @@
 
   --success: #22c55e;
   --danger: #ef4444;
+  --warning-bg: #fff3cd;
+  --warning-border: #ffc107;
+  --warning-text: #856404;
 
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   --radius: 16px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
 }
 
 html, body {
@@ -74,7 +79,7 @@ header a:hover {
   transform: translateY(-1px);
 }
 
-/* ===== Page content area (block main_content) ===== */
+/* ===== Typography ===== */
 h1 {
   margin: 18px 0 10px;
   font-size: 36px;
@@ -86,12 +91,25 @@ h2 {
   font-size: 22px;
 }
 
+h3 {
+  margin: 0 0 10px;
+}
+
 p {
   color: var(--muted);
   margin: 8px 0 0;
 }
 
-/* A “card” wrapper style you can use by adding <div class="card"> ... */
+/* ===== General links ===== */
+a {
+  color: #93c5fd;
+}
+
+a:hover {
+  color: #bfdbfe;
+}
+
+/* ===== Card ===== */
 .card {
   margin-top: 20px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
@@ -101,7 +119,17 @@ p {
   box-shadow: var(--shadow);
 }
 
-/* ===== Forms (register/login) ===== */
+.card-narrow {
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.card-mb {
+  margin-bottom: 20px;
+}
+
+/* ===== Forms ===== */
 form {
   margin-top: 18px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
@@ -110,6 +138,25 @@ form {
   padding: 22px;
   box-shadow: var(--shadow);
   max-width: 520px;
+}
+
+.form-inline {
+  display: inline;
+  margin-top: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  max-width: none;
+}
+
+.form-share {
+  margin-top: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  max-width: none;
 }
 
 label {
@@ -161,15 +208,25 @@ button:active {
   transform: translateY(0);
 }
 
-/* Errors printed by your templates */
+select {
+  padding: 10px;
+  font-size: 16px;
+  margin: 10px 0;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+}
+
+/* Form error styles */
 form br + * {
-  /* mild spacing help for your <br /> driven layout */
   display: inline-block;
 }
 
 form .error,
 form span.error,
-form div.error {
+form div.error,
+.form-error {
   color: #fecaca;
 }
 
@@ -178,23 +235,450 @@ form ul {
   padding-left: 18px;
 }
 
-/* If your errors are just raw text, this helps a bit */
 form * {
   word-break: break-word;
 }
 
-/* ===== General links inside content ===== */
-a {
-  color: #93c5fd;
+/* ===== Button variants ===== */
+.btn {
+  display: inline-block;
+  padding: 12px 24px;
+  background: var(--primary);
+  color: white;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
 }
 
-a:hover {
-  color: #bfdbfe;
+.btn:hover {
+  background: var(--primary-hover);
+  color: white;
 }
 
-/* ===== Small helper class for centered content ===== */
+.btn-success {
+  background: var(--success);
+}
+
+.btn-success:hover {
+  background: #16a34a;
+}
+
+.btn-danger {
+  background: var(--danger);
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.btn-secondary {
+  background: var(--card-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 14px;
+  border-radius: var(--radius-xs);
+  margin-top: 0;
+}
+
+.btn-inline {
+  margin-right: 5px;
+  display: inline-block;
+}
+
+/* ===== Utility classes ===== */
 .center {
   text-align: center;
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.text-warning {
+  color: var(--warning-text);
+}
+
+.text-bold {
+  font-weight: bold;
+}
+
+.text-sm {
+  font-size: 14px;
+}
+
+.text-xs {
+  font-size: 12px;
+}
+
+.text-lg {
+  font-size: 18px;
+}
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.mt-4 { margin-top: 32px; }
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+.hidden { display: none; }
+
+/* ===== Flash messages ===== */
+.message {
+  padding: 15px;
+  margin: 20px 0;
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.message.success {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.message.error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ===== Upload page ===== */
+.upload-form {
+  text-align: center;
+  background: none;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  max-width: none;
+}
+
+.drop-zone {
+  border: 3px dashed var(--primary);
+  border-radius: 10px;
+  padding: 40px;
+  margin: 20px 0;
+  background: var(--card-2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.drop-zone:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.drop-zone-icon {
+  font-size: 48px;
+  margin: 0;
+  display: block;
+}
+
+.drop-zone-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--text);
+  margin: 10px 0;
+}
+
+.drop-zone-hint {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.file-list {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 10px 0;
+  text-align: center;
+}
+
+.file-list-selected {
+  color: var(--success);
+  font-weight: bold;
+}
+
+/* ===== Progress bar ===== */
+.progress-container {
+  margin: 20px 0;
+}
+
+.progress-card {
+  background: var(--card);
+  padding: 30px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.progress-title {
+  color: var(--text);
+  margin-bottom: 20px;
+}
+
+.progress-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 20px 0;
+  height: 30px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-hover));
+  width: 0%;
+  transition: width 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.progress-bar-success {
+  background: linear-gradient(90deg, var(--success), #16a34a);
+}
+
+.progress-stats {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ===== Success page ===== */
+.link-box {
+  background: var(--card-2);
+  padding: 20px;
+  border-radius: var(--radius-sm);
+  margin: 20px 0;
+  border: 2px solid var(--success);
+}
+
+.share-link {
+  word-break: break-all;
+  font-size: 18px;
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.file-info {
+  margin: 20px 0;
+  padding: 15px;
+  background: var(--card-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.qr-container {
+  text-align: center;
+  padding: 20px;
+  background: white;
+  border-radius: 10px;
+  margin: 20px 0;
+}
+
+.qr-image {
+  max-width: 250px;
+  width: 100%;
+}
+
+.actions-row {
+  text-align: center;
+}
+
+.actions-row button,
+.actions-row .btn {
+  margin: 10px 5px;
+}
+
+/* ===== Warning / info banners ===== */
+.warning-banner {
+  padding: 15px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-sm);
+  margin: 15px 0;
+}
+
+.warning-banner p {
+  margin: 0;
+  color: var(--warning-text);
+}
+
+.encrypted-notice {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  display: inline-block;
+}
+
+/* ===== Dashboard tables ===== */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.file-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.file-table thead tr {
+  border-bottom: 2px solid var(--border);
+  text-align: left;
+}
+
+.file-table th,
+.file-table td {
+  padding: 12px;
+}
+
+.file-table tbody tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.download-badge {
+  background: var(--card-2);
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+.status-expired {
+  color: var(--danger);
+}
+
+.status-active {
+  color: var(--success);
+}
+
+.status-encrypted {
+  color: var(--warning-text);
+  font-size: 12px;
+}
+
+/* ===== Dashboard shared files ===== */
+.shared-list li {
+  margin-bottom: 10px;
+}
+
+/* ===== Decrypt status ===== */
+.decrypt-status {
+  padding: 20px;
+  background: var(--card-2);
+  border-radius: var(--radius-sm);
+  margin: 20px 0;
+}
+
+.decrypt-status-text {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.error-container {
+  padding: 20px;
+  background: var(--danger);
+  border-radius: var(--radius-sm);
+  margin: 20px 0;
+}
+
+.error-container p {
+  color: white;
+  font-weight: bold;
+}
+
+/* ===== Preview page ===== */
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 20px;
+}
+
+.preview-media {
+  text-align: center;
+  padding: 20px;
+  background: var(--card-2);
+  border-radius: var(--radius-sm);
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 600px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.preview-iframe {
+  width: 100%;
+  height: 700px;
+  border: none;
+  border-radius: var(--radius-sm);
+}
+
+.preview-no-preview {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--card-2);
+  border-radius: var(--radius-sm);
+}
+
+.preview-icon {
+  font-size: 72px;
+  margin-bottom: 20px;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
+
+/* ===== Password check page ===== */
+.password-input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card-2);
+  color: var(--text);
+}
+
+.password-submit {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  font-size: 16px;
 }
 
 /* ===== Responsive tweaks ===== */
@@ -203,4 +687,6 @@ a:hover {
   header { flex-direction: column; align-items: flex-start; }
   header p { flex-wrap: wrap; }
   form { width: 100%; }
+  .preview-header { flex-direction: column; gap: 12px; }
+  .progress-stats { flex-direction: column; gap: 4px; }
 }

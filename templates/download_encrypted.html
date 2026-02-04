@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block main_content %}
+
+<div class="card" style="max-width: 600px; margin: 50px auto; text-align: center;">
+    <h1>Encrypted File Download</h1>
+
+    <div style="margin: 20px 0;">
+        <p><strong>Filename:</strong> {{ file_info.original_filename }}</p>
+        <p><strong>Size:</strong> {{ "%.2f"|format(file_info.file_size / 1024 / 1024) }} MB</p>
+    </div>
+
+    <div id="statusContainer">
+        <div id="decryptStatus" style="padding: 20px; background: var(--card-2); border-radius: 8px; margin: 20px 0;">
+            <p id="statusText" style="font-size: 18px; font-weight: bold;">Preparing decryption...</p>
+            <div style="background: #e0e0e0; border-radius: 10px; overflow: hidden; margin: 15px 0; height: 20px;">
+                <div id="decryptProgress" style="height: 100%; background: linear-gradient(90deg, #28a745, #218838); width: 0%; transition: width 0.3s ease;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="errorContainer" style="display: none; padding: 20px; background: var(--danger); border-radius: 8px; margin: 20px 0;">
+        <p id="errorText" style="color: white; font-weight: bold;"></p>
+    </div>
+
+    <p style="text-align: center; margin-top: 20px;">
+        <a href="{{ url_for('dashboard') }}" style="color: var(--primary);">Back to Dashboard</a>
+    </p>
+</div>
+
+<script>
+function base64urlToArrayBuffer(base64url) {
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+async function decryptAndDownload() {
+    const statusText = document.getElementById('statusText');
+    const progress = document.getElementById('decryptProgress');
+    const errorContainer = document.getElementById('errorContainer');
+    const errorText = document.getElementById('errorText');
+
+    try {
+        // 1. Get key from URL fragment or sessionStorage
+        let keyB64 = window.location.hash.substring(1);
+        if (!keyB64) {
+            keyB64 = sessionStorage.getItem('e2e_key_{{ token }}');
+        }
+        if (!keyB64) {
+            keyB64 = sessionStorage.getItem('e2e_key');
+        }
+        if (!keyB64) {
+            throw new Error('No decryption key found. Make sure you have the complete link including the # fragment.');
+        }
+
+        statusText.textContent = 'Importing decryption key...';
+        progress.style.width = '10%';
+
+        // 2. Import key
+        const keyBytes = base64urlToArrayBuffer(keyB64);
+        const key = await crypto.subtle.importKey(
+            'raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt']
+        );
+
+        statusText.textContent = 'Downloading encrypted file...';
+        progress.style.width = '20%';
+
+        // 3. Fetch encrypted file
+        const response = await fetch('/serve/{{ token }}');
+        if (!response.ok) {
+            throw new Error('Failed to fetch encrypted file from server.');
+        }
+        const encryptedData = await response.arrayBuffer();
+
+        statusText.textContent = 'Decrypting file...';
+        progress.style.width = '60%';
+
+        // 4. Split IV (first 12 bytes) and ciphertext
+        const iv = new Uint8Array(encryptedData.slice(0, 12));
+        const ciphertext = encryptedData.slice(12);
+
+        // 5. Decrypt
+        const decrypted = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv: iv },
+            key,
+            ciphertext
+        );
+
+        statusText.textContent = 'Starting download...';
+        progress.style.width = '90%';
+
+        // 6. Trigger download
+        const blob = new Blob([decrypted]);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '{{ file_info.original_filename }}';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        statusText.textContent = 'Download complete!';
+        progress.style.width = '100%';
+
+    } catch (err) {
+        document.getElementById('statusContainer').style.display = 'none';
+        errorContainer.style.display = 'block';
+        errorText.textContent = err.message || 'Decryption failed. The link may be incomplete or corrupted.';
+    }
+}
+
+// Start decryption when page loads
+decryptAndDownload();
+</script>
+
+{% endblock %}

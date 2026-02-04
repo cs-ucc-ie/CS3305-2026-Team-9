@@ -118,6 +118,9 @@
                             {% else %}
                                 <span style="color: var(--success);">Active</span>
                             {% endif %}
+                            {% if file.is_encrypted %}
+                                <br><span style="color: #856404; font-size: 12px;">E2E Encrypted</span>
+                            {% endif %}
                         </td>
                     <td style="padding: 12px;">
 
@@ -140,6 +143,11 @@
         </button>
     </form>
 
+    {% if file.is_encrypted %}
+    <p style="margin-top: 8px; font-size: 13px; color: #856404; background: #fff3cd; padding: 6px 10px; border-radius: 6px; display: inline-block;">
+        Encrypted — share the copied link directly with your friend
+    </p>
+    {% else %}
     <form method="POST" action="{{ url_for('share_file', token=file['share_token']) }}" style="margin-top: 8px;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <select name="friend_id" style="padding: 6px; border-radius: 6px; border: 1px solid var(--border);">
@@ -152,6 +160,7 @@
             Share
         </button>
     </form>
+    {% endif %}
 </td>
                     </tr>
                     {% endfor %}
