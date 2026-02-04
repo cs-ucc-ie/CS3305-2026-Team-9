@@ -15,7 +15,9 @@ const win = new BrowserWindow({
   // Clear cache and load homepage
   win.webContents.session.clearCache();
   win.loadURL('http://127.0.0.1:5000/');
-  win.webContents.openDevTools();
+  if (process.env.NODE_ENV === 'development') {
+    win.webContents.openDevTools();
+  }
   
   win.webContents.on('did-finish-load', () => {
     console.log('Loaded:', win.webContents.getURL());

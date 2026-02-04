@@ -78,7 +78,6 @@
             <p><strong>Size:</strong> {{ "%.2f"|format(file_info.file_size / 1024 / 1024) }} MB</p>
             <p><strong>Uploaded:</strong> {{ file_info.upload_date }}</p>
             <p><strong>Expires:</strong> {{ file_info.expiry_date }}</p>
-            <p><strong>Expires:</strong> {{ file_info.expiry_date }}</p>
 {% if file_info.password_hash %}
 <p><strong>Password:</strong> 🔒 Protected</p>
 {% else %}

@@ -3,7 +3,7 @@ import secrets
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, session, g
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
-from database import get_db, init_db
+from database import get_db, close_db, init_db
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm, LoginForm
 from functools import wraps
@@ -17,8 +17,10 @@ import zipfile
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key')
-app.config['WTF_CSRF_ENABLED'] = False
+app.secret_key = os.getenv('SECRET_KEY')
+if not app.secret_key:
+    raise RuntimeError("SECRET_KEY environment variable is not set")
+app.config['WTF_CSRF_ENABLED'] = True
 
 @app.before_request
 def logged_in_user():
@@ -51,14 +53,12 @@ def register():
 
         if clashing_user is not None:
             form.user_id.errors.append("Username already exists")
-            db.close()
         else:
             db.execute(
                 """INSERT INTO users (user_id, salt, password) VALUES (?, ?, ?);""",
                 (user_id, salt, generate_password_hash(password+salt))
             )
             db.commit()
-            db.close()
             return redirect(url_for("login"))
     return render_template("register.html", form=form)
 
@@ -77,7 +77,6 @@ def login():
             """SELECT * FROM users WHERE user_id = ?;""",
             (user_id,)
         ).fetchone()
-        db.close()
 
         if user is None or not check_password_hash(user["password"], password+user["salt"]):
             form.password.errors.append("Username or password incorrect")
@@ -85,7 +84,7 @@ def login():
             session.clear()
             session["user_id"] = user_id
             next_page = request.args.get("next")
-            if not next_page:
+            if not next_page or not next_page.startswith("/") or next_page.startswith("//"):
                 next_page = url_for("index")
             return redirect(next_page)
     return render_template("login.html", form=form)
@@ -110,6 +109,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Initialize database
 init_db()
+
+# Close DB connections automatically at end of request
+app.teardown_appcontext(close_db)
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
@@ -166,7 +168,13 @@ def upload():
         user_id = session.get('user_id')
         
         # Get expiration time and password
-        expiry_hours = int(request.form.get('expiry', 24))
+        ALLOWED_EXPIRY_HOURS = {24, 168, 720}
+        try:
+            expiry_hours = int(request.form.get('expiry', 24))
+        except (ValueError, TypeError):
+            expiry_hours = 24
+        if expiry_hours not in ALLOWED_EXPIRY_HOURS:
+            expiry_hours = 24
         expiry_date = datetime.now() + timedelta(hours=expiry_hours)
         password = request.form.get('password', '').strip()
         salt = None
@@ -222,8 +230,7 @@ def upload():
             (saved_filename, original_filename, file_size, token, user_id, expiry_date, salt, password_hash)
         )
         db.commit()
-        db.close()
-        
+
         return redirect(url_for('upload_success', token=token))
     
     return render_template('upload.html')
@@ -233,12 +240,11 @@ def upload():
 def upload_success(token):
     db = get_db()
     file_info = db.execute('SELECT * FROM files WHERE share_token = ?', (token,)).fetchone()
-    db.close()
-    
+
     if file_info is None:
         flash('File not found', 'error')
         return redirect(url_for('index'))
-    
+
     # Generate QR code for the download link
     download_url = request.url_root + 'download/' + token
     qr_code = generate_qr_code(download_url)
@@ -253,36 +259,37 @@ def download(token):
     
     if file_info is None:
         flash('File not found or link expired', 'error')
-        db.close()
+
         return redirect(url_for('index'))
     
     # Check if link has expired
     expiry_date = datetime.fromisoformat(file_info['expiry_date'])
     if datetime.now() > expiry_date:
         flash('This link has expired', 'error')
-        db.close()
+
         return redirect(url_for('index'))
     
     # Check if password protected
     if file_info['password_hash']:
         # If GET request, show password form
         if request.method == 'GET':
-            db.close()
+    
             return render_template('password_check.html', token=token)
         
         # If POST request, check password
         if request.method == 'POST':
             entered_password = request.form.get('password', '')
-            if not check_password_hash(file_info['password_hash'], entered_password):
+            salt = file_info['salt'] or ''
+            if not check_password_hash(file_info['password_hash'], entered_password + salt):
                 flash('Incorrect password', 'error')
-                db.close()
+        
                 return render_template('password_check.html', token=token)
             # Password correct, continue to download
-    
+
     # Increment download count
     db.execute('UPDATE files SET download_count = download_count + 1 WHERE share_token = ?', (token,))
     db.commit()
-    db.close()
+
     
     # Send the file
     return send_from_directory(
@@ -341,7 +348,7 @@ def dashboard():
         (user_id,)
     ).fetchall()
 
-    db.close()
+
 
     return render_template(
         "dashboard.html",
@@ -349,7 +356,8 @@ def dashboard():
         friends=friends,
         incoming_requests=incoming_requests,
         outgoing_requests=outgoing_requests,
-        shared_with_me=shared_with_me
+        shared_with_me=shared_with_me,
+        now=datetime.now().isoformat()
     )
 
 # Add a friend
@@ -375,14 +383,15 @@ def add_friend():
         flash("User does not exist", "error")
         return redirect(url_for("dashboard"))
     
-    # Check if friends exists
+    # Check if friendship exists in either direction
     existing = db.execute(
-        "SELECT * FROM friends WHERE user_id = ? AND friend_id = ?",
-        (user_id, friend_id)
+        "SELECT * FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)",
+        (user_id, friend_id, friend_id, user_id)
     ).fetchone()
 
     if existing:
         flash("Friend request already sent or already friends", "error")
+
         return redirect(url_for("dashboard"))
 
     # Create pending request
@@ -391,7 +400,7 @@ def add_friend():
         (user_id, friend_id, "pending", user_id)
     )
     db.commit()
-    db.close()
+
 
     flash("Friend request sent", "success")
     return redirect(url_for("dashboard"))
@@ -407,7 +416,7 @@ def accept_friend(request_id):
         (request_id, user_id)
     )
     db.commit()
-    db.close()
+
 
     flash("Friend request accepted", "success")
     return redirect(url_for("dashboard"))
@@ -423,7 +432,7 @@ def decline_friend(request_id):
         (request_id, user_id)
     )
     db.commit()
-    db.close()
+
 
     flash("Friend request declined", "success")
     return redirect(url_for("dashboard"))
@@ -439,7 +448,7 @@ def unfriend(friend_id):
         (user_id, friend_id, friend_id, user_id)
     )
     db.commit()
-    db.close()
+
 
     flash("Friend removed", "success")
     return redirect(url_for("dashboard"))
@@ -459,7 +468,7 @@ def delete_file(token):
     
     if file_info is None:
         flash('File not found or you do not have permission to delete it', 'error')
-        db.close()
+
         return redirect(url_for('dashboard'))
     
     # Delete the physical file
@@ -467,13 +476,13 @@ def delete_file(token):
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_info['filename'])
         if os.path.exists(file_path):
             os.remove(file_path)
-    except Exception as e:
-        flash(f'Error deleting file: {str(e)}', 'error')
+    except Exception:
+        flash('Error deleting file', 'error')
     
     # Delete from database
     db.execute('DELETE FROM files WHERE share_token = ? AND user_id = ?', (token, user_id))
     db.commit()
-    db.close()
+
     
     flash('File deleted successfully', 'success')
     return redirect(url_for('dashboard'))
@@ -494,14 +503,28 @@ def share_file(token):
 
     if file is None:
         flash("You cannot share this file", "error")
+
         return redirect(url_for("dashboard"))
-    
+
+    # Verify receiver is an accepted friend
+    friendship = db.execute(
+        """SELECT * FROM friends
+        WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))
+        AND status = 'accepted'""",
+        (sender_id, receiver_id, receiver_id, sender_id)
+    ).fetchone()
+
+    if friendship is None:
+        flash("You can only share files with friends", "error")
+
+        return redirect(url_for("dashboard"))
+
     db.execute(
         "INSERT INTO shared_files (file_id, sender_id, receiver_id) VALUES (?, ?, ?)",
         (file["id"], sender_id, receiver_id)
     )
     db.commit()
-    db.close()
+
 
     flash("File shared", "success")
     return redirect(url_for("dashboard"))
@@ -515,30 +538,31 @@ def preview(token):
     
     if file_info is None:
         flash('File not found', 'error')
-        db.close()
+
         return redirect(url_for('index'))
     
     # Check if link has expired
     expiry_date = datetime.fromisoformat(file_info['expiry_date'])
     if datetime.now() > expiry_date:
         flash('This link has expired', 'error')
-        db.close()
+
         return redirect(url_for('index'))
     
     # Check if password protected
     if file_info['password_hash']:
         if request.method == 'GET':
-            db.close()
+    
             return render_template('password_check.html', token=token, preview=True)
         
         if request.method == 'POST':
             entered_password = request.form.get('password', '')
-            if not check_password_hash(file_info['password_hash'], entered_password):
+            salt = file_info['salt'] or ''
+            if not check_password_hash(file_info['password_hash'], entered_password + salt):
                 flash('Incorrect password', 'error')
-                db.close()
+        
                 return render_template('password_check.html', token=token, preview=True)
-    
-    db.close()
+
+
     
     # Determine if file is previewable
     file_ext = file_info['original_filename'].rsplit('.', 1)[1].lower() if '.' in file_info['original_filename'] else ''
@@ -555,11 +579,20 @@ def preview(token):
 def serve_file(token):
     db = get_db()
     file_info = db.execute('SELECT * FROM files WHERE share_token = ?', (token,)).fetchone()
-    db.close()
-    
+
+
     if file_info is None:
         return "File not found", 404
-    
+
+    # Check if link has expired
+    expiry_date = datetime.fromisoformat(file_info['expiry_date'])
+    if datetime.now() > expiry_date:
+        return "This link has expired", 403
+
+    # Block serving if file is password-protected (must use preview flow)
+    if file_info['password_hash']:
+        return "This file is password protected", 403
+
     # Serve the file (but not as attachment, so browser can display it)
     return send_from_directory(
         app.config['UPLOAD_FOLDER'],
@@ -567,4 +600,4 @@ def serve_file(token):
     )
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true')

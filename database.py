@@ -1,17 +1,26 @@
 import sqlite3
 import os
+from flask import g
 
 DATABASE = 'sharelink.db'
 
 def get_db():
-    """Connect to the database"""
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row  # Return rows as dictionaries
-    return conn
+    """Get database connection, reusing per-request if available"""
+    if 'db' not in g:
+        g.db = sqlite3.connect(DATABASE)
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+def close_db(e=None):
+    """Close database connection at end of request"""
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 def init_db():
     """Initialize the database with tables"""
-    conn = get_db()
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     # create user table

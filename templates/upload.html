@@ -97,6 +97,7 @@
             {% endwith %}
             
             <form class="upload-form" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <h2>Select a file to upload</h2>
                 <p>Allowed types: txt, pdf, images, zip, doc, docx</p>
                 <p>Max size: 100MB</p>

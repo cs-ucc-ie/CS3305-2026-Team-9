@@ -7,6 +7,7 @@
 <div class="card" style="margin-bottom: 20px;">
     <h2>Add a Friend</h2>
     <form method="POST" action="{{ url_for('add_friend') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="friend_id" placeholder="Enter friend's username"
         style="padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
         <button type="submit" style="padding: 8px 16px; background: var(--primary); color: white; border-radius: 6px;">Add Friend</button>
@@ -23,6 +24,7 @@
             <li>
                 {{ friend }}
                 <form method="POST" action="{{ url_for('unfriend', friend_id=friend) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" style="color: red;">Unfriend</button>
                 </form>
             </li>
@@ -41,9 +43,11 @@
             <p>
                 {{ req.user_id }} wants to be your friend
                 <form method="POST" action="{{ url_for('accept_friend', request_id=req.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit">Accept</button>
                 </form>
                 <form method="POST" action="{{ url_for('decline_friend', request_id=req.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" style="color: red;">Decline</button>
                 </form>
             </p>
@@ -109,13 +113,10 @@
                             </span>
                         </td>
                         <td style="padding: 12px;">
-                            {% set now = None %}
-                            {% set expiry = file.expiry_date %}
-                            <!-- Simple check: if expiry date has passed -->
-                            {% if expiry < "2026-01-28" %}
-                                <span style="color: var(--danger);">⚠️ Expired</span>
+                            {% if file.expiry_date < now %}
+                                <span style="color: var(--danger);">Expired</span>
                             {% else %}
-                                <span style="color: var(--success);">✓ Active</span>
+                                <span style="color: var(--success);">Active</span>
                             {% endif %}
                         </td>
                     <td style="padding: 12px;">
@@ -133,12 +134,14 @@
         📋 Copy
     </button>
     <form action="{{ url_for('delete_file', token=file.share_token) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this file? This cannot be undone.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" style="padding: 6px 12px; background: var(--danger); color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;">
             🗑️ Delete
         </button>
     </form>
 
-    <form method="POST" action = "{{ url_for('share_file', token=file['share_token']) }}" style="margin-top: 8px;">
+    <form method="POST" action="{{ url_for('share_file', token=file['share_token']) }}" style="margin-top: 8px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <select name="friend_id" style="padding: 6px; border-radius: 6px; border: 1px solid var(--border);">
             {% for friend in friends %}
                 <option value="{{ friend['friend_id'] }}">{{ friend['friend_id']}}</option>
