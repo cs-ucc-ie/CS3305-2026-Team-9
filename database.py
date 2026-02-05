@@ -72,6 +72,19 @@ def init_db():
     )
     ''')
     
+    # Messages table for chat
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_id TEXT NOT NULL,
+        receiver_id TEXT NOT NULL,
+        content TEXT,
+        file_id INTEGER,
+        is_read INTEGER DEFAULT 0,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
+
     # Migration: add is_encrypted column to existing databases
     try:
         cursor.execute('ALTER TABLE files ADD COLUMN is_encrypted BOOLEAN DEFAULT 0')

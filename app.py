@@ -1,6 +1,6 @@
 import os
 import secrets
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, session, g
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, session, g, jsonify
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from database import get_db, close_db, init_db
@@ -607,6 +607,228 @@ def serve_file(token):
         app.config['UPLOAD_FOLDER'],
         file_info['filename']
     )
+
+# ===== Chat API Endpoints =====
+
+def are_friends(db, user_a, user_b):
+    """Check if two users have an accepted friendship."""
+    return db.execute(
+        """SELECT * FROM friends
+           WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))
+           AND status = 'accepted'""",
+        (user_a, user_b, user_b, user_a)
+    ).fetchone()
+
+
+@app.route('/api/chat/friends')
+@login_required
+def chat_friends():
+    user_id = session.get('user_id')
+    db = get_db()
+
+    friends_rows = db.execute(
+        """SELECT * FROM friends
+           WHERE (user_id = ? OR friend_id = ?) AND status = 'accepted'""",
+        (user_id, user_id)
+    ).fetchall()
+
+    friends = []
+    for f in friends_rows:
+        friend_id = f['friend_id'] if f['user_id'] == user_id else f['user_id']
+
+        unread = db.execute(
+            "SELECT COUNT(*) as cnt FROM messages WHERE sender_id = ? AND receiver_id = ? AND is_read = 0",
+            (friend_id, user_id)
+        ).fetchone()['cnt']
+
+        last_msg = db.execute(
+            """SELECT content, timestamp, file_id FROM messages
+               WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+               ORDER BY timestamp DESC LIMIT 1""",
+            (user_id, friend_id, friend_id, user_id)
+        ).fetchone()
+
+        preview = None
+        if last_msg:
+            if last_msg['content']:
+                preview = last_msg['content']
+            elif last_msg['file_id']:
+                preview = '📎 Shared a file'
+
+        friends.append({
+            'user_id': friend_id,
+            'unread_count': unread,
+            'last_message': preview,
+            'last_message_time': last_msg['timestamp'] if last_msg else None
+        })
+
+    friends.sort(key=lambda x: x['last_message_time'] or '', reverse=True)
+    return jsonify({'friends': friends})
+
+
+@app.route('/api/chat/messages/<friend_id>')
+@login_required
+def chat_messages(friend_id):
+    user_id = session.get('user_id')
+    db = get_db()
+
+    if not are_friends(db, user_id, friend_id):
+        return jsonify({'error': 'Not friends'}), 403
+
+    after_id = request.args.get('after', 0, type=int)
+
+    rows = db.execute(
+        """SELECT m.id, m.sender_id, m.content, m.file_id, m.timestamp,
+                  f.original_filename, f.share_token
+           FROM messages m
+           LEFT JOIN files f ON m.file_id = f.id
+           WHERE ((m.sender_id = ? AND m.receiver_id = ?)
+                  OR (m.sender_id = ? AND m.receiver_id = ?))
+           AND m.id > ?
+           ORDER BY m.timestamp ASC""",
+        (user_id, friend_id, friend_id, user_id, after_id)
+    ).fetchall()
+
+    # Mark messages from this friend as read
+    db.execute(
+        "UPDATE messages SET is_read = 1 WHERE sender_id = ? AND receiver_id = ? AND is_read = 0",
+        (friend_id, user_id)
+    )
+    db.commit()
+
+    messages = []
+    for row in rows:
+        messages.append({
+            'id': row['id'],
+            'sender_id': row['sender_id'],
+            'content': row['content'],
+            'file_id': row['file_id'],
+            'file_name': row['original_filename'],
+            'file_token': row['share_token'],
+            'timestamp': row['timestamp'],
+            'is_mine': row['sender_id'] == user_id
+        })
+
+    return jsonify({'messages': messages})
+
+
+@app.route('/api/chat/send', methods=['POST'])
+@login_required
+def chat_send():
+    user_id = session.get('user_id')
+    db = get_db()
+    data = request.get_json()
+
+    if not data or not data.get('content', '').strip():
+        return jsonify({'error': 'Message content required'}), 400
+
+    receiver_id = data.get('receiver_id', '')
+    content = data['content'].strip()
+
+    if len(content) > 2000:
+        return jsonify({'error': 'Message too long'}), 400
+
+    if not are_friends(db, user_id, receiver_id):
+        return jsonify({'error': 'Not friends'}), 403
+
+    cursor = db.execute(
+        "INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)",
+        (user_id, receiver_id, content)
+    )
+    db.commit()
+
+    return jsonify({
+        'success': True,
+        'message': {
+            'id': cursor.lastrowid,
+            'sender_id': user_id,
+            'content': content,
+            'file_id': None,
+            'file_name': None,
+            'file_token': None,
+            'timestamp': datetime.now().isoformat(),
+            'is_mine': True
+        }
+    })
+
+
+@app.route('/api/chat/share-file', methods=['POST'])
+@login_required
+def chat_share_file():
+    user_id = session.get('user_id')
+    db = get_db()
+    data = request.get_json()
+
+    receiver_id = data.get('receiver_id', '')
+    file_id = data.get('file_id')
+
+    if not file_id:
+        return jsonify({'error': 'file_id required'}), 400
+
+    if not are_friends(db, user_id, receiver_id):
+        return jsonify({'error': 'Not friends'}), 403
+
+    file_info = db.execute(
+        "SELECT * FROM files WHERE id = ? AND user_id = ?",
+        (file_id, user_id)
+    ).fetchone()
+
+    if not file_info:
+        return jsonify({'error': 'File not found'}), 404
+
+    cursor = db.execute(
+        "INSERT INTO messages (sender_id, receiver_id, file_id) VALUES (?, ?, ?)",
+        (user_id, receiver_id, file_id)
+    )
+
+    db.execute(
+        "INSERT INTO shared_files (file_id, sender_id, receiver_id) VALUES (?, ?, ?)",
+        (file_id, user_id, receiver_id)
+    )
+    db.commit()
+
+    return jsonify({
+        'success': True,
+        'message': {
+            'id': cursor.lastrowid,
+            'sender_id': user_id,
+            'content': None,
+            'file_id': file_id,
+            'file_name': file_info['original_filename'],
+            'file_token': file_info['share_token'],
+            'timestamp': datetime.now().isoformat(),
+            'is_mine': True
+        }
+    })
+
+
+@app.route('/api/chat/unread-count')
+@login_required
+def chat_unread_count():
+    user_id = session.get('user_id')
+    db = get_db()
+    count = db.execute(
+        "SELECT COUNT(*) as cnt FROM messages WHERE receiver_id = ? AND is_read = 0",
+        (user_id,)
+    ).fetchone()['cnt']
+    return jsonify({'unread_count': count})
+
+
+@app.route('/api/chat/my-files')
+@login_required
+def chat_my_files():
+    user_id = session.get('user_id')
+    db = get_db()
+    files = db.execute(
+        """SELECT id, original_filename, share_token FROM files
+           WHERE user_id = ? AND expiry_date > ? AND is_encrypted = 0
+           ORDER BY upload_date DESC""",
+        (user_id, datetime.now().isoformat())
+    ).fetchall()
+    return jsonify({
+        'files': [{'id': f['id'], 'original_filename': f['original_filename'], 'share_token': f['share_token']} for f in files]
+    })
+
 
 if __name__ == '__main__':
     app.run(debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true')

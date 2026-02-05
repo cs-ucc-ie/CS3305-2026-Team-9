@@ -1,141 +1,77 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload File - ShareLink</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-        }
-        .container {
-            background: #f5f5f5;
-            padding: 40px;
-            border-radius: 10px;
-            margin-top: 30px;
-        }
-        .upload-form {
-            text-align: center;
-        }
-        input[type="file"] {
-            margin: 20px 0;
-            padding: 10px;
-        }
-        button {
-            background: #007bff;
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        .message {
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
-            text-align: center;
-        }
-        .success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        a {
-            color: #007bff;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-    <h1>ShareLink - Upload File</h1>
-    
-    <div class="container">
-        <!-- Upload Progress Bar (hidden by default) -->
-        <div id="progressContainer" style="display: none; margin: 20px 0;">
-            <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <h3 style="color: #333; margin-bottom: 20px;">Uploading Files...</h3>
-                <div style="background: #e0e0e0; border-radius: 10px; overflow: hidden; margin: 20px 0; height: 30px;">
-                    <div id="progressBar" style="height: 100%; background: linear-gradient(90deg, #007bff, #0056b3); width: 0%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">
-                        0%
-                    </div>
-                </div>
-                <div style="display: flex; justify-content: space-between; color: #666; font-size: 14px;">
-                    <span><strong>Uploaded:</strong> <span id="uploadedSize">0 MB</span></span>
-                    <span><strong>Speed:</strong> <span id="uploadSpeed">0 MB/s</span></span>
-                    <span><strong>Total:</strong> <span id="totalSize">0 MB</span></span>
-                </div>
+{% extends "base.html" %}
+
+{% block title %}Upload File - ShareLink{% endblock %}
+
+{% block main_content %}
+
+<h1 class="center">ShareLink - Upload File</h1>
+
+<div class="card">
+    <!-- Upload Progress Bar (hidden by default) -->
+    <div id="progressContainer" class="progress-container hidden">
+        <div class="progress-card">
+            <h3 class="progress-title">Uploading Files...</h3>
+            <div class="progress-track">
+                <div id="progressBar" class="progress-bar">0%</div>
+            </div>
+            <div class="progress-stats">
+                <span><strong>Uploaded:</strong> <span id="uploadedSize">0 MB</span></span>
+                <span><strong>Speed:</strong> <span id="uploadSpeed">0 MB/s</span></span>
+                <span><strong>Total:</strong> <span id="totalSize">0 MB</span></span>
             </div>
         </div>
-        
-        <!-- Upload Form -->
-        <div id="uploadForm">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="message {{ category }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-            
-            <form class="upload-form" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <h2>Select a file to upload</h2>
-                <p>Allowed types: txt, pdf, images, zip, doc, docx, mp3, mp4, wav, mov, avi, csv, xlsx, pptx</p>
-                <p>Max size: 100MB</p>
-                
-<div id="dropZone" style="border: 3px dashed #007bff; border-radius: 10px; padding: 40px; margin: 20px 0; background: #f8f9fa; cursor: pointer; transition: all 0.3s ease;">
-    <div style="text-align: center;">
-        <p style="font-size: 48px; margin: 0;">📁</p>
-        <p style="font-size: 18px; font-weight: bold; color: #333; margin: 10px 0;">Drag & Drop Files Here</p>
-        <p style="font-size: 14px; color: #666;">or click to browse</p>
     </div>
-    <input type="file" name="files" id="fileInput" multiple required style="display: none;">
+
+    <!-- Upload Form -->
+    <div id="uploadForm">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form class="upload-form" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <h2>Select a file to upload</h2>
+            <p>Allowed types: txt, pdf, images, zip, doc, docx, mp3, mp4, wav, mov, avi, csv, xlsx, pptx</p>
+            <p>Max size: 100MB</p>
+
+            <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="Drop files here or click to browse">
+                <div class="center">
+                    <p class="drop-zone-icon">📁</p>
+                    <p class="drop-zone-title">Drag & Drop Files Here</p>
+                    <p class="drop-zone-hint">or click to browse</p>
+                </div>
+                <input type="file" name="files" id="fileInput" multiple required class="file-input-hidden">
+            </div>
+            <p id="fileList" class="file-list"></p>
+            <p class="file-list">You can select multiple files - they will be zipped together</p>
+
+            <label for="expiry"><strong>Link expires in:</strong></label>
+            <select name="expiry" id="expiry">
+                <option value="24">24 hours</option>
+                <option value="168">7 days</option>
+                <option value="720">30 days</option>
+            </select>
+
+            <label for="password" class="mt-2"><strong>Password Protection (Optional):</strong></label>
+            <input type="password" name="password" id="password" placeholder="Leave blank for no password">
+            <p class="text-sm text-muted">Set a password to protect this file. Anyone downloading will need to enter it.</p>
+
+            <button type="submit" class="btn mt-3">Upload File</button>
+        </form>
+
+        <p class="center mt-3">
+            <a href="{{ url_for('index') }}">← Back to Home</a>
+        </p>
+    </div>
 </div>
-<p id="fileList" style="font-size: 14px; color: #666; margin: 10px 0; text-align: center;"></p>
-<p style="font-size: 14px; color: #666; margin: 5px 0; text-align: center;">You can select multiple files - they will be zipped together</p>
-                <br><br>
 
-                <label for="expiry" style="display: block; margin: 10px 0;"><strong>Link expires in:</strong></label>
-                <select name="expiry" id="expiry" style="padding: 10px; font-size: 16px; margin: 10px 0; border-radius: 5px;">
-                    <option value="24">24 hours</option>
-                    <option value="168">7 days</option>
-                    <option value="720">30 days</option>
-                </select>
-                <br><br>
+{% endblock %}
 
-                <label for="password" style="display: block; margin: 20px 0 5px;"><strong>Password Protection (Optional):</strong></label>
-                <input type="password" name="password" id="password" placeholder="Leave blank for no password" style="padding: 10px; width: 300px; border-radius: 5px; border: 1px solid #ddd;">
-                <p style="font-size: 14px; color: #666; margin: 5px 0;">Set a password to protect this file. Anyone downloading will need to enter it.</p>
-
-                <br><br>
-
-                <button type="submit">Upload File</button>
-            </form>
-            
-            <p style="text-align: center; margin-top: 30px;">
-                <a href="{{ url_for('index') }}">← Back to Home</a>
-            </p>
-        </div>
-    </div>
+{% block scripts %}
 <script>
 // Drag and Drop functionality
 const dropZone = document.getElementById('dropZone');
@@ -145,6 +81,14 @@ const fileList = document.getElementById('fileList');
 // Click to open file picker
 dropZone.addEventListener('click', () => {
     fileInput.click();
+});
+
+// Keyboard support for drop zone
+dropZone.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileInput.click();
+    }
 });
 
 // Prevent default drag behaviors
@@ -161,17 +105,13 @@ function preventDefaults(e) {
 // Highlight drop zone when dragging over it
 ['dragenter', 'dragover'].forEach(eventName => {
     dropZone.addEventListener(eventName, () => {
-        dropZone.style.background = '#e3f2fd';
-        dropZone.style.borderColor = '#0056b3';
-        dropZone.style.transform = 'scale(1.02)';
+        dropZone.classList.add('drop-zone-active');
     }, false);
 });
 
 ['dragleave', 'drop'].forEach(eventName => {
     dropZone.addEventListener(eventName, () => {
-        dropZone.style.background = '#f8f9fa';
-        dropZone.style.borderColor = '#007bff';
-        dropZone.style.transform = 'scale(1)';
+        dropZone.classList.remove('drop-zone-active');
     }, false);
 });
 
@@ -192,16 +132,16 @@ fileInput.addEventListener('change', (e) => {
 function updateFileList(files) {
     if (files.length === 0) {
         fileList.textContent = '';
+        fileList.classList.remove('file-list-selected');
         return;
     }
-    
+
     if (files.length === 1) {
         fileList.textContent = `Selected: ${files[0].name}`;
     } else {
         fileList.textContent = `Selected: ${files.length} files`;
     }
-    fileList.style.color = '#28a745';
-    fileList.style.fontWeight = 'bold';
+    fileList.classList.add('file-list-selected');
 }
 // --- E2E Encryption Helpers ---
 function arrayBufferToBase64url(buffer) {
@@ -241,10 +181,12 @@ document.querySelector('.upload-form').addEventListener('submit', async function
     const uploadedSize = document.getElementById('uploadedSize');
     const uploadSpeed = document.getElementById('uploadSpeed');
     const totalSize = document.getElementById('totalSize');
+    const submitBtn = this.querySelector('button[type="submit"]');
 
-    // Show progress, hide form
-    progressContainer.style.display = 'block';
-    uploadForm.style.display = 'none';
+    // Disable submit button and show progress
+    submitBtn.disabled = true;
+    progressContainer.classList.remove('hidden');
+    uploadForm.classList.add('hidden');
 
     // Update status to show encryption phase
     document.querySelector('#progressContainer h3').textContent = 'Encrypting Files...';
@@ -308,19 +250,20 @@ document.querySelector('.upload-form').addEventListener('submit', async function
             window.location.href = xhr.responseURL + '#' + keyB64;
         } else {
             alert('Upload failed. Please try again.');
-            progressContainer.style.display = 'none';
-            uploadForm.style.display = 'block';
+            submitBtn.disabled = false;
+            progressContainer.classList.add('hidden');
+            uploadForm.classList.remove('hidden');
         }
     };
 
     xhr.onerror = function() {
         alert('Upload failed. Please try again.');
-        progressContainer.style.display = 'none';
-        uploadForm.style.display = 'block';
+        submitBtn.disabled = false;
+        progressContainer.classList.add('hidden');
+        uploadForm.classList.remove('hidden');
     };
 
     xhr.send(formData);
 });
 </script>
-</body>
-</html>
+{% endblock %}

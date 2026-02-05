@@ -1,33 +1,38 @@
 {% extends "base.html" %}
 
+{% block title %}Encrypted Download - ShareLink{% endblock %}
+
 {% block main_content %}
 
-<div class="card" style="max-width: 600px; margin: 50px auto; text-align: center;">
+<div class="card card-narrow center">
     <h1>Encrypted File Download</h1>
 
-    <div style="margin: 20px 0;">
+    <div class="mb-2">
         <p><strong>Filename:</strong> {{ file_info.original_filename }}</p>
         <p><strong>Size:</strong> {{ "%.2f"|format(file_info.file_size / 1024 / 1024) }} MB</p>
     </div>
 
     <div id="statusContainer">
-        <div id="decryptStatus" style="padding: 20px; background: var(--card-2); border-radius: 8px; margin: 20px 0;">
-            <p id="statusText" style="font-size: 18px; font-weight: bold;">Preparing decryption...</p>
-            <div style="background: #e0e0e0; border-radius: 10px; overflow: hidden; margin: 15px 0; height: 20px;">
-                <div id="decryptProgress" style="height: 100%; background: linear-gradient(90deg, #28a745, #218838); width: 0%; transition: width 0.3s ease;"></div>
+        <div id="decryptStatus" class="decrypt-status">
+            <p id="statusText" class="decrypt-status-text"><span class="spinner"></span> Preparing decryption...</p>
+            <div class="progress-track">
+                <div id="decryptProgress" class="progress-bar progress-bar-success"></div>
             </div>
         </div>
     </div>
 
-    <div id="errorContainer" style="display: none; padding: 20px; background: var(--danger); border-radius: 8px; margin: 20px 0;">
-        <p id="errorText" style="color: white; font-weight: bold;"></p>
+    <div id="errorContainer" class="error-container hidden">
+        <p id="errorText"></p>
     </div>
 
-    <p style="text-align: center; margin-top: 20px;">
-        <a href="{{ url_for('dashboard') }}" style="color: var(--primary);">Back to Dashboard</a>
+    <p class="center mt-2">
+        <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
     </p>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
 function base64urlToArrayBuffer(base64url) {
     const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
@@ -111,7 +116,7 @@ async function decryptAndDownload() {
 
     } catch (err) {
         document.getElementById('statusContainer').style.display = 'none';
-        errorContainer.style.display = 'block';
+        errorContainer.classList.remove('hidden');
         errorText.textContent = err.message || 'Decryption failed. The link may be incomplete or corrupted.';
     }
 }
@@ -119,5 +124,4 @@ async function decryptAndDownload() {
 // Start decryption when page loads
 decryptAndDownload();
 </script>
-
 {% endblock %}

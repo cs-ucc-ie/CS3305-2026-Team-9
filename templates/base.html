@@ -2,8 +2,12 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
-        <title>Web Development 2</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}ShareLink{% endblock %}</title>
         <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+        {% if g.user %}
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+        {% endif %}
     </head>
     <body>
         <header>
@@ -20,5 +24,48 @@
         <main>
         {% block main_content %}{% endblock %}
         </main>
+
+        {% block scripts %}{% endblock %}
+
+        {% if g.user %}
+        <!-- Chat Widget -->
+        <div id="chat-widget" class="chat-widget">
+            <div id="chat-panel" class="chat-panel hidden">
+                <div class="chat-header">
+                    <span id="chat-header-title">Messages</span>
+                    <button type="button" class="chat-close" onclick="toggleChat()">&times;</button>
+                </div>
+
+                <div id="chat-friends-list" class="chat-body">
+                    <div id="chat-friends-container"></div>
+                </div>
+
+                <div id="chat-conversation" class="chat-body hidden">
+                    <button type="button" class="chat-back" onclick="showFriendsList()">&#8592; Back</button>
+                    <div id="chat-messages" class="chat-messages"></div>
+                    <div id="chat-file-picker" class="chat-file-picker hidden">
+                        <select id="chat-file-select">
+                            <option value="">Select a file...</option>
+                        </select>
+                        <button type="button" class="btn btn-sm" onclick="sendFile()">Send</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="hideFilePicker()">Cancel</button>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chat-input" placeholder="Type a message..."
+                               onkeydown="if(event.key==='Enter')sendMessage()">
+                        <button type="button" class="chat-send-btn" onclick="sendMessage()">Send</button>
+                        <button type="button" class="chat-attach-btn" onclick="showFilePicker()" title="Share a file">📎</button>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" id="chat-toggle" class="chat-toggle" onclick="toggleChat()">
+                <span class="chat-toggle-icon">💬</span>
+                <span id="chat-badge" class="chat-badge hidden">0</span>
+            </button>
+        </div>
+
+        <script src="{{ url_for('static', filename='chat.js') }}"></script>
+        {% endif %}
     </body>
 </html>

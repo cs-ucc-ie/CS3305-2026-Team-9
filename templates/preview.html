@@ -1,35 +1,34 @@
 {% extends "base.html" %}
 
+{% block title %}File Preview - ShareLink{% endblock %}
+
 {% block main_content %}
 
 <h1>File Preview</h1>
 
 <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+    <div class="preview-header">
         <div>
             <h2>{{ file_info.original_filename }}</h2>
-            <p style="margin: 5px 0;"><strong>Size:</strong> {{ "%.2f"|format(file_info.file_size / 1024 / 1024) }} MB</p>
-            <p style="margin: 5px 0;"><strong>Uploaded:</strong> {{ file_info.upload_date[:16] }}</p>
-            <p style="margin: 5px 0;"><strong>Downloads:</strong> {{ file_info.download_count }}</p>
+            <p class="mt-0"><strong>Size:</strong> {{ "%.2f"|format(file_info.file_size / 1024 / 1024) }} MB</p>
+            <p class="mt-0"><strong>Uploaded:</strong> {{ file_info.upload_date[:16] }}</p>
+            <p class="mt-0"><strong>Downloads:</strong> {{ file_info.download_count }}</p>
         </div>
-        
+
         <div>
-            <a href="{{ url_for('download', token=token) }}" 
-               style="display: inline-block; padding: 12px 24px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                ⬇️ Download File
-            </a>
+            <a href="{{ url_for('download', token=token) }}" class="btn">⬇️ Download File</a>
         </div>
     </div>
-    
-    <hr style="border: none; border-top: 1px solid var(--border); margin: 20px 0;">
-    
+
+    <hr class="divider">
+
     {% if file_info.is_encrypted %}
         <!-- Encrypted file preview: decrypt client-side then display -->
-        <div id="previewContainer" style="text-align: center; padding: 20px; background: var(--card-2); border-radius: 8px;">
-            <p id="previewStatus" style="font-size: 18px; padding: 40px;">Decrypting file for preview...</p>
+        <div id="previewContainer" class="preview-media">
+            <p id="previewStatus" class="decrypt-status-text decrypt-status-padded"><span class="spinner"></span> Decrypting file for preview...</p>
         </div>
-        <div id="previewError" style="display: none; padding: 20px; background: var(--danger); border-radius: 8px; text-align: center;">
-            <p id="previewErrorText" style="color: white; font-weight: bold;"></p>
+        <div id="previewError" class="error-container hidden">
+            <p id="previewErrorText"></p>
         </div>
 
         <script>
@@ -77,29 +76,23 @@
                 const img = document.createElement('img');
                 img.src = URL.createObjectURL(blob);
                 img.alt = '{{ file_info.original_filename }}';
-                img.style.maxWidth = '100%';
-                img.style.maxHeight = '600px';
-                img.style.borderRadius = '8px';
-                img.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                img.className = 'preview-image';
                 container.appendChild(img);
                 {% elif is_pdf %}
                 const blob = new Blob([decrypted], { type: 'application/pdf' });
                 const iframe = document.createElement('iframe');
                 iframe.src = URL.createObjectURL(blob);
-                iframe.style.width = '100%';
-                iframe.style.height = '700px';
-                iframe.style.border = 'none';
-                iframe.style.borderRadius = '8px';
+                iframe.className = 'preview-iframe';
                 container.appendChild(iframe);
                 {% else %}
-                container.innerHTML = '<div style="font-size: 72px; margin-bottom: 20px;">📎</div>' +
+                container.innerHTML = '<div class="preview-icon">📎</div>' +
                     '<h3>Preview not available for this file type</h3>' +
-                    '<p style="color: var(--muted);">{{ file_ext.upper() }} files cannot be previewed in browser.</p>';
+                    '<p class="text-muted">{{ file_ext.upper() }} files cannot be previewed in browser.</p>';
                 {% endif %}
 
             } catch (err) {
                 container.style.display = 'none';
-                errorDiv.style.display = 'block';
+                errorDiv.classList.remove('hidden');
                 errorText.textContent = err.message || 'Decryption failed.';
             }
         }
@@ -108,22 +101,20 @@
         </script>
 
     {% elif is_image %}
-        <div style="text-align: center; padding: 20px; background: var(--card-2); border-radius: 8px;">
+        <div class="preview-media">
             <img src="{{ url_for('serve_file', token=token) }}"
                  alt="{{ file_info.original_filename }}"
-                 style="max-width: 100%; max-height: 600px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                 class="preview-image">
         </div>
 
     {% elif is_pdf %}
-        <div style="background: var(--card-2); border-radius: 8px; padding: 10px;">
-            <iframe src="{{ url_for('serve_file', token=token) }}"
-                    style="width: 100%; height: 700px; border: none; border-radius: 8px;">
-            </iframe>
+        <div class="preview-media">
+            <iframe src="{{ url_for('serve_file', token=token) }}" class="preview-iframe"></iframe>
         </div>
 
     {% else %}
-        <div style="text-align: center; padding: 60px 20px; background: var(--card-2); border-radius: 8px;">
-            <div style="font-size: 72px; margin-bottom: 20px;">
+        <div class="preview-no-preview">
+            <div class="preview-icon">
                 {% if file_ext == 'txt' %}
                     📄
                 {% elif file_ext in ['doc', 'docx'] %}
@@ -139,18 +130,15 @@
                 {% endif %}
             </div>
             <h3>Preview not available for this file type</h3>
-            <p style="color: var(--muted);">{{ file_ext.upper() }} files cannot be previewed in browser.</p>
-            <p style="margin-top: 20px;">
-                <a href="{{ url_for('download', token=token) }}"
-                   style="display: inline-block; padding: 12px 24px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px;">
-                    Download to View
-                </a>
+            <p class="text-muted">{{ file_ext.upper() }} files cannot be previewed in browser.</p>
+            <p class="mt-2">
+                <a href="{{ url_for('download', token=token) }}" class="btn">Download to View</a>
             </p>
         </div>
     {% endif %}
-    
-    <p style="text-align: center; margin-top: 30px;">
-        <a href="{{ url_for('dashboard') }}" style="color: var(--primary);">← Back to Dashboard</a>
+
+    <p class="center mt-3">
+        <a href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
     </p>
 </div>
 
