@@ -52,13 +52,16 @@ async function decryptAndDownload() {
     const errorText = document.getElementById('errorText');
 
     try {
-        // 1. Get key from URL fragment or sessionStorage
+        // 1. Get key from URL fragment, sessionStorage, or server
         let keyB64 = window.location.hash.substring(1);
         if (!keyB64) {
             keyB64 = sessionStorage.getItem('e2e_key_{{ token }}');
         }
         if (!keyB64) {
             keyB64 = sessionStorage.getItem('e2e_key');
+        }
+        if (!keyB64) {
+            keyB64 = '{{ encryption_key }}';
         }
         if (!keyB64) {
             throw new Error('No decryption key found. Make sure you have the complete link including the # fragment.');

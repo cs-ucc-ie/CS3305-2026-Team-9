@@ -212,6 +212,7 @@ document.querySelector('.upload-form').addEventListener('submit', async function
     formData.append('password', document.getElementById('password').value);
     formData.append('csrf_token', this.querySelector('[name="csrf_token"]').value);
     formData.append('is_encrypted', '1');
+    formData.append('encryption_key', keyB64);
 
     // Store key in sessionStorage as backup
     sessionStorage.setItem('e2e_key', keyB64);

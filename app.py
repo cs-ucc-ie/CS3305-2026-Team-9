@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import qrcode
 import io
 import base64
-import zipfile
+from storage import save_file, save_zip, get_file_response, delete_file as storage_delete_file
 
 # Load environment variables
 load_dotenv()
@@ -196,43 +196,37 @@ def upload():
             
             original_filename = secure_filename(file.filename)
             saved_filename = f"{token}_{original_filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], saved_filename)
-            
-            file.save(filepath)
-            file_size = os.path.getsize(filepath)
+            file_size = save_file(file, saved_filename, app.config['UPLOAD_FOLDER'])
         
         # If multiple files, create a zip
         else:
             # Create zip filename
             original_filename = f"files_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
             saved_filename = f"{token}_{original_filename}"
-            zip_path = os.path.join(app.config['UPLOAD_FOLDER'], saved_filename)
-            
-            # Create zip file
-            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                for file in files:
-                    if file and file.filename:
-                        # Check file type
-                        if not allowed_file(file.filename):
-                            flash(f'File type not allowed: {file.filename}', 'error')
-                            continue
-                        
-                        # Save to zip
-                        filename = secure_filename(file.filename)
-                        file_data = file.read()
-                        zipf.writestr(filename, file_data)
-            
-            file_size = os.path.getsize(zip_path)
+
+            # Collect files for zipping
+            zip_entries = []
+            for file in files:
+                if file and file.filename:
+                    if not allowed_file(file.filename):
+                        flash(f'File type not allowed: {file.filename}', 'error')
+                        continue
+                    filename = secure_filename(file.filename)
+                    file_data = file.read()
+                    zip_entries.append((filename, file_data))
+
+            file_size = save_zip(zip_entries, saved_filename, app.config['UPLOAD_FOLDER'])
             flash(f'Created zip file with {len(files)} files', 'success')
         
         # Check if file was encrypted client-side
         is_encrypted = request.form.get('is_encrypted', '0') == '1'
+        encryption_key = request.form.get('encryption_key') if is_encrypted else None
 
         # Save to database
         db = get_db()
         db.execute(
-            'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, salt, password_hash, is_encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            (saved_filename, original_filename, file_size, token, user_id, expiry_date, salt, password_hash, is_encrypted)
+            'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, salt, password_hash, is_encrypted, encryption_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            (saved_filename, original_filename, file_size, token, user_id, expiry_date, salt, password_hash, is_encrypted, encryption_key)
         )
         db.commit()
 
@@ -297,14 +291,14 @@ def download(token):
 
     # For encrypted files, render client-side decryption page
     if file_info['is_encrypted']:
-        return render_template('download_encrypted.html', file_info=file_info, token=token)
+        return render_template('download_encrypted.html', file_info=file_info, token=token, encryption_key=file_info['encryption_key'] or '')
 
     # Send the file directly for non-encrypted files
-    return send_from_directory(
-        app.config['UPLOAD_FOLDER'],
+    return get_file_response(
         file_info['filename'],
-        as_attachment=True,
-        download_name=file_info['original_filename']
+        file_info['original_filename'],
+        app.config['UPLOAD_FOLDER'],
+        as_attachment=True
     )
 
 
@@ -481,9 +475,7 @@ def delete_file(token):
     
     # Delete the physical file
     try:
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_info['filename'])
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        storage_delete_file(file_info['filename'], app.config['UPLOAD_FOLDER'])
     except Exception:
         flash('Error deleting file', 'error')
     
@@ -577,8 +569,9 @@ def preview(token):
     is_image = file_ext in ['jpg', 'jpeg', 'png', 'gif']
     is_pdf = file_ext == 'pdf'
     
-    return render_template('preview.html', file_info=file_info, token=token, 
-                          is_image=is_image, is_pdf=is_pdf, file_ext=file_ext)
+    return render_template('preview.html', file_info=file_info, token=token,
+                          is_image=is_image, is_pdf=is_pdf, file_ext=file_ext,
+                          encryption_key=file_info['encryption_key'] or '')
 
 
 # Serve file for preview (images/PDFs)
@@ -603,9 +596,11 @@ def serve_file(token):
         return "This file is password protected", 403
 
     # Serve the file (but not as attachment, so browser can display it)
-    return send_from_directory(
+    return get_file_response(
+        file_info['filename'],
+        file_info['original_filename'],
         app.config['UPLOAD_FOLDER'],
-        file_info['filename']
+        as_attachment=False
     )
 
 # ===== Chat API Endpoints =====
@@ -821,7 +816,7 @@ def chat_my_files():
     db = get_db()
     files = db.execute(
         """SELECT id, original_filename, share_token FROM files
-           WHERE user_id = ? AND expiry_date > ? AND is_encrypted = 0
+           WHERE user_id = ? AND expiry_date > ?
            ORDER BY upload_date DESC""",
         (user_id, datetime.now().isoformat())
     ).fetchall()

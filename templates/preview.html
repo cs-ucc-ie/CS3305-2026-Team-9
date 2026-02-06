@@ -53,6 +53,7 @@
                 let keyB64 = window.location.hash.substring(1);
                 if (!keyB64) keyB64 = sessionStorage.getItem('e2e_key_{{ token }}');
                 if (!keyB64) keyB64 = sessionStorage.getItem('e2e_key');
+                if (!keyB64) keyB64 = '{{ encryption_key }}';
                 if (!keyB64) throw new Error('No decryption key found. Use the complete link with the # fragment.');
 
                 const keyBytes = base64urlToArrayBuffer(keyB64);

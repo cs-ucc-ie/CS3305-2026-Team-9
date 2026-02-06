@@ -91,6 +91,12 @@ def init_db():
     except Exception:
         pass  # Column already exists
 
+    # Migration: add encryption_key column to existing databases
+    try:
+        cursor.execute('ALTER TABLE files ADD COLUMN encryption_key TEXT')
+    except Exception:
+        pass  # Column already exists
+
     conn.commit()
     conn.close()
     print("Database initialized successfully!")
