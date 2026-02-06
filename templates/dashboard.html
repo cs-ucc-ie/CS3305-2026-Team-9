@@ -16,6 +16,21 @@
 </div>
 
 <div class="card card-mb">
+    <h2>Profile Picture</h2>
+
+    <form method="POST" action="{{ url_for('upload_profile_picture') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="file" name="picture" accept="image/*">
+        <button type="submit" class="btn btn-sm">Upload</button>
+    </form>
+
+    {% if user_profile_picture %}
+        <img src="{{ url_for('static', filename='profiles/' ~ user_profile_picture) }}" 
+             style="width: 80px; height: 80px; border-radius: 50%; margin-top: 10px;">
+    {% endif %}
+</div>
+
+<div class="card card-mb">
     <h2>Your Friends</h2>
 
     {% if friends %}
@@ -79,6 +94,19 @@
 {% if files %}
     <div class="card">
         <h2>My Uploaded Files ({{ files|length }})</h2>
+
+        <form method="GET" action="{{ url_for('dashboard') }}" class="form-inline mb-2">
+            <input type="text" name="q" placeholder="Search files..." value="{{ request.args.get('q', '') }}" class="search-input">
+
+            <select name="sort" onchange="this.form.submit()" class="sort-select">
+                <option value="newest" {% if request.args.get('sort') == 'newest' %}selected{% endif %}>Newest</option>
+                <option value="oldest" {% if request.args.get('sort') == 'oldest' %}selected{% endif %}>Oldest</option>
+                <option value="largest" {% if request.args.get('sort') == 'largest' %}selected{% endif %}>Largest</option>
+                <option value="popular" {% if request.args.get('sort') == 'popular' %}selected{% endif %}>Most Downloaded</option>
+            </select>
+
+            <button type="submit" class="btn btn-sm">Search</button>
+        </form>
 
         <div class="table-wrapper">
             <table class="file-table">
