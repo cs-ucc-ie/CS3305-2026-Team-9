@@ -96,6 +96,29 @@ def logout():
     session.clear()
     return redirect(url_for("index"))
 
+@app.route("/profile-picture", methods=["POST"])
+@login_required
+def upload_profile_picture():
+    if "picture" not in request.files:
+        flash("No file selected", "error")
+        return redirect(url_for("dashboard"))
+    file = request.files["picture"]
+    if file.filename == "":
+        flash("No file selected", "error")
+        return redirect(url_for("dashboard"))
+    
+    filename = secure_filename(g.user + "_" + file.filename)
+    save_path = os.path.join("static/profiles", filename)
+    os.makedirs("static/profiles", exist_ok=True)
+    file.save(save_path)
+
+    db = get_db()
+    db.execute("UPDATE users SET profile_picture = ? WHERE user_id = ?", (filename, g.user))
+    db.commit()
+
+    flash("Profile picture updated!", "success")
+    return redirect(url_for("dashboard"))
+
 
 
 # Configuration
@@ -317,12 +340,29 @@ def dashboard():
     
     db = get_db()
     
-    # files I uploaded
-    files = db.execute(
-        "SELECT * FROM files Where user_id = ? ORDER BY upload_date DESC",
-        (user_id,)
-    ).fetchall()
+    search_query = request.args.get("q", "").strip()
+    sort_option = request.args.get("sort", "newest")
 
+    query = "SELECT * FROM files WHERE user_id = ?"
+    params = [user_id]
+
+    if search_query:
+        query += " AND original_filename LIKE ?"
+        params.append(f"%{search_query}%")
+
+    if sort_option == "newest":
+        query += " ORDER BY upload_date DESC"
+    elif sort_option == "oldest":
+        query += " ORDER BY upload_date ASC"
+    elif sort_option == "largest":
+        query += " ORDER BY file_size DESC"
+    elif sort_option == "popular":
+        query += " ORDER BY download_count DESC"
+    else:
+        query += " ORDER BY upload_date DESC"
+
+    files = db.execute(query, params).fetchall()
+    
     # Incoming friend requests
     incoming_requests = db.execute(
         "SELECT * FROM friends WHERE friend_id = ? AND status = 'pending'",
@@ -356,6 +396,12 @@ def dashboard():
         (user_id,)
     ).fetchall()
 
+    row = db.execute(
+        "SELECT profile_picture FROM users WHERE user_id = ?",
+        (user_id,)
+    ).fetchone()
+
+    user_profile_picture = row["profile_picture"] or None if row else None
 
 
     return render_template(
@@ -365,6 +411,7 @@ def dashboard():
         incoming_requests=incoming_requests,
         outgoing_requests=outgoing_requests,
         shared_with_me=shared_with_me,
+        user_profile_picture=user_profile_picture,
         now=datetime.now().isoformat()
     )
 
