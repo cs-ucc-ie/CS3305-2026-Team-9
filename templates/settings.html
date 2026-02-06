@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block main_content %}
+
+<h1>Settings</h1>
+
+<div class="card card-mb">
+    <h2>Profile Picture</h2>
+
+    <form method="POST" action="{{ url_for('upload_profile_picture') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="file" name="picture" accept="image/*">
+        <button type="submit" class="btn btn-sm">Upload</button>
+    </form>
+
+    {% if user_profile_picture %}
+        <img src="{{ url_for('static', filename='profiles/' ~ user_profile_picture) }}"
+             style="width: 80px; height: 80px; border-radius: 50%; margin-top: 10px;">
+    {% endif %}
+</div>
+{% endblock %}

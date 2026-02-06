@@ -6,6 +6,10 @@
 
 <h1>My Dashboard</h1>
 
+<p>
+    <a href="{{ url_for('settings') }}" class="btn btn-secondary">Settings</a>
+</p>
+
 <div class="card card-mb">
     <h2>Add a Friend</h2>
     <form class="form-inline" method="POST" action="{{ url_for('add_friend') }}">
@@ -15,20 +19,6 @@
     </form>
 </div>
 
-<div class="card card-mb">
-    <h2>Profile Picture</h2>
-
-    <form method="POST" action="{{ url_for('upload_profile_picture') }}" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="file" name="picture" accept="image/*">
-        <button type="submit" class="btn btn-sm">Upload</button>
-    </form>
-
-    {% if user_profile_picture %}
-        <img src="{{ url_for('static', filename='profiles/' ~ user_profile_picture) }}" 
-             style="width: 80px; height: 80px; border-radius: 50%; margin-top: 10px;">
-    {% endif %}
-</div>
 
 <div class="card card-mb">
     <h2>Your Friends</h2>

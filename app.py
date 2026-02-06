@@ -27,6 +27,18 @@ csrf = CSRFProtect(app)
 @app.before_request
 def logged_in_user():
     g.user = session.get("user_id", None)
+
+@app.before_request
+def load_profile_picture():
+    if "user_id" in session:
+        db = get_db()
+        row = db.execute(
+            "SELECT profile_picture FROM users WHERE user_id = ?",
+            (session["user_id"],)
+        ).fetchone()
+        g.profile_picture = row["profile_picture"] if row and row["profile_picture"] else None
+    else:
+        g.profile_picture = None
     
 def login_required(view):
     @wraps(view)
@@ -117,7 +129,7 @@ def upload_profile_picture():
     db.commit()
 
     flash("Profile picture updated!", "success")
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("settings"))
 
 
 
@@ -408,6 +420,21 @@ def dashboard():
         user_profile_picture=user_profile_picture,
         now=datetime.now().isoformat()
     )
+
+@app.route("/settings")
+@login_required
+def settings():
+    user_id = session.get('user_id')
+    db = get_db()
+
+    row = db.execute(
+        "SELECT profile_picture FROM users WHERE user_id = ?",
+        (user_id,)
+    ).fetchone()
+
+    user_profile_picture = row["profile_picture"] if row else None
+
+    return render_template("settings.html", user_profile_picture=user_profile_picture)
 
 # Add a friend
 @app.route('/add_friend', methods=['POST'])
