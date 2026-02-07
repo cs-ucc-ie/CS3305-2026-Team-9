@@ -9,15 +9,44 @@
 <div class="card card-mb">
     <h2>Profile Picture</h2>
 
-    <form method="POST" action="{{ url_for('upload_profile_picture') }}" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="file" name="picture" accept="image/*">
-        <button type="submit" class="btn btn-sm">Upload</button>
-    </form>
-
     {% if user_profile_picture %}
         <img src="{{ url_for('static', filename='profiles/' ~ user_profile_picture) }}"
-             style="width: 80px; height: 80px; border-radius: 50%; margin-top: 10px;">
+             class="settings-profile-pic">
     {% endif %}
+
+    <form method="POST" action="{{ url_for('upload_profile_picture') }}" enctype="multipart/form-data" class="form-bare">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="file" name="picture" accept="image/png,image/jpeg,image/gif,image/webp">
+        <p class="text-muted text-sm mt-1">Max 5MB. Accepted formats: PNG, JPG, GIF, WEBP</p>
+        <button type="submit" class="btn btn-sm">Upload</button>
+    </form>
 </div>
+
+<div class="card card-mb">
+    <h2>Change Password</h2>
+
+    <form method="POST" action="{{ url_for('change_password') }}" class="form-bare">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label for="current_password">Current Password</label>
+        <input type="password" id="current_password" name="current_password" required>
+
+        <label for="new_password">New Password</label>
+        <input type="password" id="new_password" name="new_password" required>
+
+        <label for="confirm_password">Confirm New Password</label>
+        <input type="password" id="confirm_password" name="confirm_password" required>
+
+        <p class="text-muted text-sm mt-1">Must be at least 6 characters with a digit, uppercase, lowercase, and symbol.</p>
+        <button type="submit" class="btn btn-sm mt-2">Update Password</button>
+    </form>
+</div>
+
+<div class="card card-mb">
+    <h2>Account Info</h2>
+    <p><strong>Username:</strong> {{ g.user }}</p>
+</div>
+
+<p class="mt-2"><a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a></p>
+
 {% endblock %}

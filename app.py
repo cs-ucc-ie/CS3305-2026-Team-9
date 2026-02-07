@@ -108,20 +108,38 @@ def logout():
     session.clear()
     return redirect(url_for("index"))
 
+ALLOWED_PROFILE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+MAX_PROFILE_SIZE = 5 * 1024 * 1024  # 5MB
+
 @app.route("/profile-picture", methods=["POST"])
 @login_required
 def upload_profile_picture():
     if "picture" not in request.files:
         flash("No file selected", "error")
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("settings"))
     file = request.files["picture"]
     if file.filename == "":
         flash("No file selected", "error")
-        return redirect(url_for("dashboard"))
-    
+        return redirect(url_for("settings"))
+
+    # Validate file extension
+    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+    if ext not in ALLOWED_PROFILE_EXTENSIONS:
+        flash("Invalid image format. Allowed: PNG, JPG, JPEG, GIF, WEBP", "error")
+        return redirect(url_for("settings"))
+
+    # Validate file size
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_PROFILE_SIZE:
+        flash("Profile picture must be under 5MB", "error")
+        return redirect(url_for("settings"))
+
     filename = secure_filename(g.user + "_" + file.filename)
-    save_path = os.path.join("static/profiles", filename)
-    os.makedirs("static/profiles", exist_ok=True)
+    profiles_dir = os.path.join(app.root_path, "static", "profiles")
+    os.makedirs(profiles_dir, exist_ok=True)
+    save_path = os.path.join(profiles_dir, filename)
     file.save(save_path)
 
     db = get_db()
@@ -435,6 +453,41 @@ def settings():
     user_profile_picture = row["profile_picture"] if row else None
 
     return render_template("settings.html", user_profile_picture=user_profile_picture)
+
+@app.route("/change-password", methods=["POST"])
+@login_required
+def change_password():
+    user_id = session.get('user_id')
+    current_password = request.form.get("current_password", "")
+    new_password = request.form.get("new_password", "")
+    confirm_password = request.form.get("confirm_password", "")
+
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
+
+    if not user or not check_password_hash(user["password"], current_password + user["salt"]):
+        flash("Current password is incorrect", "error")
+        return redirect(url_for("settings"))
+
+    if new_password != confirm_password:
+        flash("New passwords do not match", "error")
+        return redirect(url_for("settings"))
+
+    if len(new_password) < 6:
+        flash("Password must be at least 6 characters long", "error")
+        return redirect(url_for("settings"))
+
+    salt = str(base64.b64encode(os.urandom(32)))
+    password_hash = generate_password_hash(new_password + salt)
+
+    db.execute(
+        "UPDATE users SET password = ?, salt = ? WHERE user_id = ?",
+        (password_hash, salt, user_id)
+    )
+    db.commit()
+
+    flash("Password updated successfully", "success")
+    return redirect(url_for("settings"))
 
 # Add a friend
 @app.route('/add_friend', methods=['POST'])

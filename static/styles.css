@@ -662,6 +662,45 @@ form * {
   display: inline-block;
 }
 
+/* ===== Search bar ===== */
+.search-bar {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.search-bar .search-input {
+  padding-right: 30px;
+}
+
+.search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 50%;
+}
+
+.search-clear:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ===== Settings profile picture ===== */
+.settings-profile-pic {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 12px;
+  object-fit: cover;
+  border: 2px solid var(--border);
+}
+
 /* ===== Dashboard tables ===== */
 .table-wrapper {
   overflow-x: auto;
