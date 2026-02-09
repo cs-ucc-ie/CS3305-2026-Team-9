@@ -1,5 +1,8 @@
 import os
+import re
 import secrets
+import time
+from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, session, g, jsonify
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -13,6 +16,11 @@ import qrcode
 import io
 import base64
 from storage import save_file, save_zip, get_file_response, delete_file as storage_delete_file
+
+# Simple in-memory rate limiter for login attempts
+login_attempts = defaultdict(list)  # IP -> list of timestamps
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_WINDOW_SECONDS = 300  # 5 minutes
 
 # Load environment variables
 load_dotenv()
@@ -56,7 +64,7 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         user_id = form.user_id.data
-        salt = str(base64.b64encode(os.urandom(32)))
+        salt = base64.b64encode(os.urandom(32)).decode('utf-8')
         password = form.password.data
 
         db = get_db()
@@ -70,7 +78,7 @@ def register():
         else:
             db.execute(
                 """INSERT INTO users (user_id, salt, password) VALUES (?, ?, ?);""",
-                (user_id, salt, generate_password_hash(password+salt))
+                (user_id, salt, generate_password_hash(password + salt))
             )
             db.commit()
             return redirect(url_for("login"))
@@ -83,6 +91,17 @@ def login():
 
     form = LoginForm()
     if form.validate_on_submit():
+        # Rate limiting: check recent failed attempts from this IP
+        client_ip = request.remote_addr
+        now = time.time()
+        login_attempts[client_ip] = [
+            t for t in login_attempts[client_ip]
+            if now - t < LOGIN_WINDOW_SECONDS
+        ]
+        if len(login_attempts[client_ip]) >= MAX_LOGIN_ATTEMPTS:
+            flash("Too many login attempts. Please try again in a few minutes.", "error")
+            return render_template("login.html", form=form)
+
         user_id = form.user_id.data
         password = form.password.data
 
@@ -92,9 +111,12 @@ def login():
             (user_id,)
         ).fetchone()
 
-        if user is None or not check_password_hash(user["password"], password+user["salt"]):
+        if user is None or not check_password_hash(user["password"], password + user["salt"]):
+            login_attempts[client_ip].append(now)
             form.password.errors.append("Username or password incorrect")
         else:
+            # Clear failed attempts on successful login
+            login_attempts.pop(client_ip, None)
             session.clear()
             session["user_id"] = user_id
             next_page = request.args.get("next")
@@ -139,10 +161,20 @@ def upload_profile_picture():
     filename = secure_filename(g.user + "_" + file.filename)
     profiles_dir = os.path.join(app.root_path, "static", "profiles")
     os.makedirs(profiles_dir, exist_ok=True)
+
+    # Delete old profile picture if it exists
+    db = get_db()
+    old_pic = db.execute(
+        "SELECT profile_picture FROM users WHERE user_id = ?", (g.user,)
+    ).fetchone()
+    if old_pic and old_pic["profile_picture"]:
+        old_path = os.path.join(profiles_dir, old_pic["profile_picture"])
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
     save_path = os.path.join(profiles_dir, filename)
     file.save(save_path)
 
-    db = get_db()
     db.execute("UPDATE users SET profile_picture = ? WHERE user_id = ?", (filename, g.user))
     db.commit()
 
@@ -168,9 +200,25 @@ init_db()
 # Close DB connections automatically at end of request
 app.teardown_appcontext(close_db)
 
+ALLOWED_MIME_TYPES = {
+    'text/plain', 'application/pdf', 'image/png', 'image/jpeg', 'image/gif',
+    'application/zip', 'application/x-zip-compressed',
+    'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'audio/mpeg', 'video/mp4', 'audio/wav', 'video/quicktime', 'video/x-msvideo',
+    'text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/octet-stream',  # fallback for encrypted files
+}
+
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def allowed_mime_type(mimetype):
+    """Check if the MIME type is allowed. Returns True if mimetype is empty/None (fallback to extension check)."""
+    if not mimetype or mimetype == 'application/octet-stream':
+        return True  # Fall back to extension-based check
+    return mimetype in ALLOWED_MIME_TYPES
 
 def generate_token():
     """Generate a unique random token for sharing"""
@@ -235,15 +283,15 @@ def upload():
         salt = None
         password_hash = None
         if password:
-            salt = str(base64.b64encode(os.urandom(32)))
-            password_hash = generate_password_hash(password+salt)
+            salt = base64.b64encode(os.urandom(32)).decode('utf-8')
+            password_hash = generate_password_hash(password + salt)
         
         # If single file, save normally
         if len(files) == 1:
             file = files[0]
-            
+
             # Check if file type is allowed
-            if not allowed_file(file.filename):
+            if not allowed_file(file.filename) or not allowed_mime_type(file.mimetype):
                 flash('File type not allowed', 'error')
                 return redirect(request.url)
             
@@ -477,7 +525,20 @@ def change_password():
         flash("Password must be at least 6 characters long", "error")
         return redirect(url_for("settings"))
 
-    salt = str(base64.b64encode(os.urandom(32)))
+    if not re.search(r'\d', new_password):
+        flash("Password must include at least one digit", "error")
+        return redirect(url_for("settings"))
+    if not re.search(r'[A-Z]', new_password):
+        flash("Password must include at least one uppercase letter", "error")
+        return redirect(url_for("settings"))
+    if not re.search(r'[a-z]', new_password):
+        flash("Password must include at least one lowercase letter", "error")
+        return redirect(url_for("settings"))
+    if not re.search(r'[^A-Za-z0-9]', new_password):
+        flash("Password must include at least one symbol", "error")
+        return redirect(url_for("settings"))
+
+    salt = base64.b64encode(os.urandom(32)).decode('utf-8')
     password_hash = generate_password_hash(new_password + salt)
 
     db.execute(
@@ -606,6 +667,11 @@ def delete_file(token):
     except Exception:
         flash('Error deleting file', 'error')
     
+    # Delete related shared_files and messages referencing this file
+    file_id = file_info['id']
+    db.execute('DELETE FROM shared_files WHERE file_id = ?', (file_id,))
+    db.execute('UPDATE messages SET file_id = NULL WHERE file_id = ?', (file_id,))
+
     # Delete from database
     db.execute('DELETE FROM files WHERE share_token = ? AND user_id = ?', (token, user_id))
     db.commit()
@@ -952,5 +1018,34 @@ def chat_my_files():
     })
 
 
+def cleanup_expired_files():
+    """Remove expired files from storage and database."""
+    import sqlite3
+    conn = sqlite3.connect('sharelink.db')
+    conn.row_factory = sqlite3.Row
+    expired = conn.execute(
+        "SELECT * FROM files WHERE expiry_date < ?",
+        (datetime.now().isoformat(),)
+    ).fetchall()
+
+    for f in expired:
+        try:
+            storage_delete_file(f['filename'], UPLOAD_FOLDER)
+        except Exception:
+            pass
+        conn.execute('DELETE FROM shared_files WHERE file_id = ?', (f['id'],))
+        conn.execute('UPDATE messages SET file_id = NULL WHERE file_id = ?', (f['id'],))
+        conn.execute('DELETE FROM files WHERE id = ?', (f['id'],))
+
+    conn.commit()
+    conn.close()
+    return len(expired)
+
+
 if __name__ == '__main__':
+    # Clean up expired files on startup
+    with app.app_context():
+        removed = cleanup_expired_files()
+        if removed:
+            print(f"Cleaned up {removed} expired file(s)")
     app.run(debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true')

@@ -32,11 +32,11 @@ def init_db():
         )
                    ''')
     
-    #Add profile picture 
+    #Add profile picture
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN profile_picture TEXT")
-    except:
-        pass
+    except Exception:
+        pass  # Column already exists
     
     # Create files table
     cursor.execute('''

@@ -15,6 +15,10 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function escapeAttr(text) {
+    return text.replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function formatTime(timestamp) {
     if (!timestamp) return '';
     const d = new Date(timestamp.replace(' ', 'T'));
@@ -61,7 +65,7 @@ function loadFriendsList() {
                 const badge = f.unread_count > 0
                     ? '<div class="chat-friend-unread">' + f.unread_count + '</div>'
                     : '';
-                html += '<div class="chat-friend-item" onclick="openConversation(\'' + escapeHtml(f.user_id) + '\')">'
+                html += '<div class="chat-friend-item" onclick="openConversation(\'' + escapeAttr(f.user_id) + '\')">'
                     + '<div>'
                     + '<div class="chat-friend-name">' + escapeHtml(f.user_id) + '</div>'
                     + '<div class="chat-friend-preview">' + preview + '</div>'

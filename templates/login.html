@@ -2,18 +2,26 @@
 
 {% block main_content %}
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="message {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
         {{ form.user_id.label }}
         {{ form.user_id() }}
         {% for error in form.user_id.errors %}
-            {{ error }}
+            <div class="form-error">{{ error }}</div>
         {% endfor %}
         <br />
         {{ form.password.label }}
         {{ form.password() }}
         {% for error in form.password.errors %}
-            {{ error }}
+            <div class="form-error">{{ error }}</div>
         {% endfor %}
         <br />
         {{ form.submit() }}

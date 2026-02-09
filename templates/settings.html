@@ -4,6 +4,14 @@
 
 {% block main_content %}
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="message {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
 <h1>Settings</h1>
 
 <div class="card card-mb">

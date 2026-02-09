@@ -4,6 +4,14 @@
 
 {% block main_content %}
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="message {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
 <h1>My Dashboard</h1>
 
 <p>
@@ -164,7 +172,8 @@
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <select name="friend_id">
                                 {% for friend in friends %}
-                                    <option value="{{ friend['friend_id'] }}">{{ friend['friend_id']}}</option>
+                                    {% set friend_name = friend['friend_id'] if friend['user_id'] == g.user else friend['user_id'] %}
+                                    <option value="{{ friend_name }}">{{ friend_name }}</option>
                                 {% endfor %}
                             </select>
                             <button type="submit" class="btn btn-sm">Share</button>
