@@ -4,15 +4,30 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{% block title %}ShareLink{% endblock %}</title>
+        <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon.png') }}">
+        <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
         {% if g.user %}
         <meta name="csrf-token" content="{{ csrf_token() }}">
         {% endif %}
+        <script>
+            // Apply saved theme immediately to prevent flash of wrong theme
+            (function() {
+                var saved = localStorage.getItem('sharelink-theme');
+                if (saved === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            })();
+        </script>
     </head>
     <body>
         <header>
             <a href="{{ url_for('index') }}" class="header-brand">ShareLink</a>
             <nav class="header-nav">
+                <button type="button" class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+                    <span class="theme-icon" id="themeIcon">🌙</span>
+                </button>
 {% if g.user %}
                 <div class="header-user">
                     {% if g.profile_picture %}
@@ -77,5 +92,35 @@
 
         <script src="{{ url_for('static', filename='chat.js') }}"></script>
         {% endif %}
+
+        <script>
+            // Theme toggle
+            function toggleTheme() {
+                var html = document.documentElement;
+                var current = html.getAttribute('data-theme') || 'dark';
+                var next = current === 'light' ? 'dark' : 'light';
+
+                if (next === 'dark') {
+                    html.removeAttribute('data-theme');
+                } else {
+                    html.setAttribute('data-theme', 'light');
+                }
+                localStorage.setItem('sharelink-theme', next);
+                updateThemeIcon(next);
+            }
+
+            function updateThemeIcon(theme) {
+                var icon = document.getElementById('themeIcon');
+                if (icon) {
+                    icon.textContent = theme === 'light' ? '☀️' : '🌙';
+                }
+            }
+
+            // Set icon on page load
+            (function() {
+                var saved = localStorage.getItem('sharelink-theme') || 'dark';
+                updateThemeIcon(saved);
+            })();
+        </script>
     </body>
 </html>

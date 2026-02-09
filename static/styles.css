@@ -24,6 +24,64 @@
   --radius: 16px;
   --radius-sm: 8px;
   --radius-xs: 6px;
+
+  /* Theme-aware colours (dark defaults) */
+  --overlay-light: rgba(255, 255, 255, 0.05);
+  --overlay-light-2: rgba(255, 255, 255, 0.02);
+  --overlay-light-4: rgba(255, 255, 255, 0.04);
+  --overlay-light-8: rgba(255, 255, 255, 0.08);
+  --overlay-light-10: rgba(255, 255, 255, 0.10);
+  --overlay-light-14: rgba(255, 255, 255, 0.14);
+  --overlay-light-18: rgba(255, 255, 255, 0.18);
+  --overlay-dark-25: rgba(0, 0, 0, 0.25);
+  --overlay-dark-15: rgba(0, 0, 0, 0.15);
+  --input-bg: rgba(0, 0, 0, 0.25);
+  --link-color: #93c5fd;
+  --link-hover: #bfdbfe;
+  --hero-badge-bg: rgba(59, 130, 246, 0.12);
+  --hero-badge-border: rgba(59, 130, 246, 0.25);
+  --hero-badge-text: #93c5fd;
+  --error-text: #fca5a5;
+  --body-gradient: radial-gradient(1200px 800px at 20% 0%, #15244a 0%, var(--bg) 55%);
+}
+
+/* ===== Light theme ===== */
+[data-theme="light"] {
+  --bg: #f5f7fb;
+  --card: #ffffff;
+  --card-2: #f0f2f8;
+  --text: #1a1d2e;
+  --muted: #5c6478;
+  --border: rgba(0, 0, 0, 0.10);
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning-bg: rgba(245, 158, 11, 0.10);
+  --warning-border: rgba(245, 158, 11, 0.3);
+  --warning-text: #b45309;
+
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+
+  --overlay-light: rgba(0, 0, 0, 0.03);
+  --overlay-light-2: rgba(0, 0, 0, 0.01);
+  --overlay-light-4: rgba(0, 0, 0, 0.03);
+  --overlay-light-8: rgba(0, 0, 0, 0.05);
+  --overlay-light-10: rgba(0, 0, 0, 0.06);
+  --overlay-light-14: rgba(0, 0, 0, 0.08);
+  --overlay-light-18: rgba(0, 0, 0, 0.12);
+  --overlay-dark-25: rgba(0, 0, 0, 0.06);
+  --overlay-dark-15: rgba(0, 0, 0, 0.04);
+  --input-bg: rgba(0, 0, 0, 0.04);
+  --link-color: #2563eb;
+  --link-hover: #1d4ed8;
+  --hero-badge-bg: rgba(37, 99, 235, 0.08);
+  --hero-badge-border: rgba(37, 99, 235, 0.2);
+  --hero-badge-text: #2563eb;
+  --error-text: #dc2626;
+  --body-gradient: radial-gradient(1200px 800px at 20% 0%, #dbeafe 0%, var(--bg) 55%);
 }
 
 html {
@@ -37,9 +95,17 @@ html, body {
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background: radial-gradient(1200px 800px at 20% 0%, #15244a 0%, var(--bg) 55%);
+  background: var(--body-gradient);
   color: var(--text);
   line-height: 1.5;
+}
+
+/* ===== Smooth theme transition ===== */
+body, .card, form, .feature-card, .stats-bar, .security-item,
+header a, .chat-panel, .chat-header, .chat-file-picker,
+input[type="text"], input[type="password"], select,
+.filetype-chip, .search-input, .sort-select, .drop-zone {
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* ===== Text selection ===== */
@@ -117,15 +183,15 @@ header a {
   text-decoration: none;
   padding: 8px 14px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--overlay-light-4);
   border-radius: 999px;
   font-size: 14px;
   transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
 
 header a:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: var(--overlay-light-8);
+  border-color: var(--overlay-light-18);
   transform: translateY(-1px);
 }
 
@@ -143,6 +209,39 @@ header a:focus-visible {
   .header-nav {
     width: 100%;
   }
+}
+
+/* ===== Theme toggle button ===== */
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--overlay-light-4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  background: var(--overlay-light-8);
+  border-color: var(--overlay-light-18);
+  transform: rotate(20deg) scale(1.1);
+}
+
+.theme-toggle:active {
+  transform: rotate(20deg) scale(0.95);
+}
+
+.theme-icon {
+  font-size: 18px;
+  line-height: 1;
+  pointer-events: none;
 }
 
 /* ===== Typography ===== */
@@ -168,11 +267,11 @@ p {
 
 /* ===== General links ===== */
 a {
-  color: #93c5fd;
+  color: var(--link-color);
 }
 
 a:hover {
-  color: #bfdbfe;
+  color: var(--link-hover);
 }
 
 a:focus-visible {
@@ -184,11 +283,15 @@ a:focus-visible {
 /* ===== Card ===== */
 .card {
   margin-top: 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(180deg, var(--overlay-light), var(--overlay-light-2));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 22px;
   box-shadow: var(--shadow);
+}
+
+[data-theme="light"] .card {
+  background: var(--card);
 }
 
 .card-narrow {
@@ -204,7 +307,7 @@ a:focus-visible {
 /* ===== Forms ===== */
 form {
   margin-top: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(180deg, var(--overlay-light), var(--overlay-light-2));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 22px;
@@ -212,6 +315,10 @@ form {
   max-width: 520px;
   margin-left: auto;
   margin-right: auto;
+}
+
+[data-theme="light"] form {
+  background: var(--card);
 }
 
 .form-inline {
@@ -253,8 +360,8 @@ input[type="password"] {
   width: 100%;
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--overlay-light-14);
+  background: var(--input-bg);
   color: var(--text);
   outline: none;
   font-size: 16px;
@@ -327,7 +434,7 @@ select {
   margin: 10px 0;
   border-radius: var(--radius-xs);
   border: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--input-bg);
   color: var(--text);
   outline: none;
 }
@@ -346,7 +453,7 @@ form .error,
 form span.error,
 form div.error,
 .form-error {
-  color: #fca5a5;
+  color: var(--error-text);
   font-size: 14px;
   margin-top: 4px;
   padding: 6px 10px;
@@ -417,7 +524,7 @@ form * {
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--overlay-light-8);
   color: var(--text);
 }
 
@@ -498,7 +605,7 @@ form * {
 
 .message.error {
   background: rgba(239, 68, 68, 0.15);
-  color: #fca5a5;
+  color: var(--error-text);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
@@ -510,10 +617,10 @@ form * {
 .hero-badge {
   display: inline-block;
   padding: 6px 16px;
-  background: rgba(59, 130, 246, 0.12);
-  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: var(--hero-badge-bg);
+  border: 1px solid var(--hero-badge-border);
   border-radius: 999px;
-  color: #93c5fd;
+  color: var(--hero-badge-text);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -567,16 +674,20 @@ form * {
 }
 
 .feature-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(180deg, var(--overlay-light), var(--overlay-light-2));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 24px;
   transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
+[data-theme="light"] .feature-card {
+  background: var(--card);
+}
+
 .feature-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--overlay-light-18);
 }
 
 .feature-icon {
@@ -666,9 +777,13 @@ form * {
   gap: 0;
   margin-top: 40px;
   padding: 20px 24px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(180deg, var(--overlay-light), var(--overlay-light-2));
   border: 1px solid var(--border);
   border-radius: var(--radius);
+}
+
+[data-theme="light"] .stats-bar {
+  background: var(--card);
 }
 
 .stat-item {
@@ -737,7 +852,7 @@ form * {
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--overlay-light-4);
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 13px;
@@ -748,7 +863,7 @@ form * {
 
 .filetype-chip:hover {
   transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--overlay-light-18);
 }
 
 .filetype-icon {
@@ -765,9 +880,13 @@ form * {
 
 .security-item {
   padding: 16px;
-  background: rgba(0, 0, 0, 0.15);
+  background: var(--overlay-dark-15);
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--overlay-light-4);
+}
+
+[data-theme="light"] .security-item {
+  background: var(--card-2);
 }
 
 .security-item-header {
@@ -884,7 +1003,7 @@ form * {
 }
 
 .progress-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--overlay-light-10);
   border-radius: 10px;
   overflow: hidden;
   margin: 20px 0;
@@ -1028,7 +1147,7 @@ form * {
   font-size: 14px;
   border-radius: var(--radius-xs);
   border: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--input-bg);
   color: var(--text);
   outline: none;
   width: auto;
@@ -1058,7 +1177,7 @@ form * {
 
 .search-clear:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--overlay-light-10);
 }
 
 /* ===== Sort select (dashboard) ===== */
@@ -1068,7 +1187,7 @@ form * {
   margin: 0;
   border-radius: var(--radius-xs);
   border: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--input-bg);
   color: var(--text);
   cursor: pointer;
 }
@@ -1116,7 +1235,7 @@ form * {
 }
 
 .file-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--overlay-light-4);
 }
 
 .download-badge {
@@ -1246,7 +1365,7 @@ form * {
   margin: 10px 0;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
-  background: var(--card-2);
+  background: var(--input-bg);
   color: var(--text);
   font-size: 16px;
 }
@@ -1450,7 +1569,7 @@ form * {
 }
 
 .chat-close:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--overlay-light-10);
   color: var(--text);
   transform: none;
 }
@@ -1474,7 +1593,7 @@ form * {
 }
 
 .chat-friend-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--overlay-light-4);
 }
 
 .chat-friend-name {
@@ -1510,7 +1629,7 @@ form * {
 .chat-back {
   background: none;
   border: none;
-  color: #93c5fd;
+  color: var(--link-color);
   cursor: pointer;
   padding: 8px 16px;
   font-size: 14px;
@@ -1521,7 +1640,7 @@ form * {
 }
 
 .chat-back:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--overlay-light-4);
   transform: none;
 }
 
@@ -1552,7 +1671,7 @@ form * {
 
 .chat-msg-theirs {
   align-self: flex-start;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--overlay-light-8);
   color: var(--text);
   border-bottom-left-radius: 4px;
 }
@@ -1561,6 +1680,10 @@ form * {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.5);
   margin-top: 4px;
+}
+
+[data-theme="light"] .chat-msg-theirs .chat-msg-time {
+  color: var(--muted);
 }
 
 .chat-msg-theirs .chat-msg-time {
@@ -1597,7 +1720,7 @@ form * {
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--input-bg);
   color: var(--text);
   font-size: 14px;
   outline: none;
@@ -1635,7 +1758,7 @@ form * {
 }
 
 .chat-attach-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--overlay-light-8);
   transform: none;
 }
 
