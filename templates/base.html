@@ -11,20 +11,24 @@
     </head>
     <body>
         <header>
+            <a href="{{ url_for('index') }}" class="header-brand">ShareLink</a>
+            <nav class="header-nav">
 {% if g.user %}
-    <div style="display: flex; align-items: center; gap: 10px;">
-        {% if g.profile_picture %}
-            <img src="{{ url_for('static', filename='profiles/' ~ g.profile_picture) }}"
-                 style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover;">
-        {% endif %}
-        <p>Username: {{ g.user }}</p>
-    </div>
-    <p><a href="{{ url_for('dashboard') }}">My Dashboard</a></p>
-    <p><a href="{{ url_for('logout') }}">logout</a></p>
-            {% else %}
-                <p><a href="{{ url_for('register') }}">register</a></p>
-                <p><a href="{{ url_for('login') }}">login</a></p>
-            {% endif %}
+                <div class="header-user">
+                    {% if g.profile_picture %}
+                        <img src="{{ url_for('static', filename='profiles/' ~ g.profile_picture) }}"
+                             class="header-avatar">
+                    {% endif %}
+                    <span class="header-username">{{ g.user }}</span>
+                </div>
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('upload') }}">Upload</a>
+                <a href="{{ url_for('logout') }}">Logout</a>
+{% else %}
+                <a href="{{ url_for('register') }}">Register</a>
+                <a href="{{ url_for('login') }}">Login</a>
+{% endif %}
+            </nav>
         </header>
 
         <main>

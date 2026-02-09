@@ -1,16 +1,347 @@
 {% extends "base.html" %}
 
+{% block title %}ShareLink - Secure File Sharing{% endblock %}
+
 {% block main_content %}
 
-    <h1>File Sharing</h1>
-
-    {% if g.user %}
-        <p>You are logged in as <strong>{{ g.user }}</strong>.</p>
-        <p><a href="{{ url_for('upload') }}">Upload a file</a></p>
-    {% else %}
-        <p>You are not logged in.</p>
-        <p><a href="{{ url_for('login') }}">Login to upload</a></p>
-
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="message {{ category }}">{{ message }}</div>
+        {% endfor %}
     {% endif %}
+{% endwith %}
+
+{% if g.user %}
+
+<!-- Logged-in home -->
+<div class="hero center">
+    <h1 class="hero-title">Welcome back, {{ g.user }}</h1>
+    <p class="hero-subtitle">What would you like to do?</p>
+
+    <div class="hero-actions">
+        <a href="{{ url_for('upload') }}" class="btn btn-lg">Upload a File</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-lg">My Dashboard</a>
+        <a href="{{ url_for('settings') }}" class="btn btn-secondary btn-lg">Settings</a>
+    </div>
+</div>
+
+<!-- Your stats -->
+<div class="stats-bar">
+    <div class="stat-item">
+        <span class="stat-number">{{ user_stats.my_files }}</span>
+        <span class="stat-label">My Files</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+        <span class="stat-number">{{ user_stats.active_files }}</span>
+        <span class="stat-label">Active</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+        <span class="stat-number">{{ user_stats.my_downloads }}</span>
+        <span class="stat-label">Downloads</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+        <span class="stat-number">{{ friend_count }}</span>
+        <span class="stat-label">Friends</span>
+    </div>
+</div>
+
+<!-- Recent files -->
+<div class="card mt-4">
+    <h2>Recent Files</h2>
+    {% if recent_files %}
+    <div class="table-wrapper">
+        <table class="file-table">
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Size</th>
+                    <th>Downloads</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for file in recent_files %}
+                <tr>
+                    <td>
+                        {{ file.original_filename }}
+                        {% if file.is_encrypted %}
+                            <span class="status-encrypted">E2E</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ "%.2f"|format(file.file_size / 1024 / 1024) }} MB</td>
+                    <td><span class="download-badge">{{ file.download_count }}</span></td>
+                    <td>
+                        {% if file.expiry_date > now %}
+                            <span class="status-active">Active</span>
+                        {% else %}
+                            <span class="status-expired">Expired</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('preview', token=file.share_token) }}" class="btn btn-sm">Preview</a>
+                        <button onclick="navigator.clipboard.writeText('{{ request.url_root }}download/{{ file.share_token }}').then(()=>alert('Link copied!'))" class="btn btn-sm btn-secondary">Copy Link</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="center mt-2"><a href="{{ url_for('dashboard') }}">View all files on Dashboard</a></p>
+    {% else %}
+    <div class="center" style="padding: 40px 20px;">
+        <p class="text-lg">No files uploaded yet</p>
+        <p class="text-muted">Upload your first file to get started</p>
+        <a href="{{ url_for('upload') }}" class="btn mt-2">Upload a File</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Quick links -->
+<div class="features-grid mt-4" style="grid-template-columns: repeat(3, 1fr);">
+    <a href="{{ url_for('upload') }}" class="feature-card" style="text-decoration:none;">
+        <div class="feature-icon">📤</div>
+        <h3>Upload Files</h3>
+        <p>Drag and drop or browse to upload files with optional encryption and password protection.</p>
+    </a>
+    <a href="{{ url_for('dashboard') }}" class="feature-card" style="text-decoration:none;">
+        <div class="feature-icon">📊</div>
+        <h3>Manage Files</h3>
+        <p>View, share, and manage all your uploaded files. Track downloads and manage friends.</p>
+    </a>
+    <a href="{{ url_for('settings') }}" class="feature-card" style="text-decoration:none;">
+        <div class="feature-icon">⚙️</div>
+        <h3>Settings</h3>
+        <p>Update your profile picture, change your password, and manage your account.</p>
+    </a>
+</div>
+
+{% else %}
+
+<!-- Logged-out landing page -->
+<div class="hero center">
+    <p class="hero-badge">Secure. Simple. Shareable.</p>
+    <h1 class="hero-title">Share files with <span class="hero-highlight">anyone</span>, anywhere</h1>
+    <p class="hero-subtitle">Upload, encrypt, and share files with unique links. Set expiration dates, add password protection, or enable end-to-end encryption.</p>
+
+    <div class="hero-actions">
+        <a href="{{ url_for('register') }}" class="btn btn-lg">Get Started</a>
+        <a href="{{ url_for('login') }}" class="btn btn-secondary btn-lg">Sign In</a>
+    </div>
+</div>
+
+<!-- Stats counter -->
+<div class="stats-bar">
+    <div class="stat-item">
+        <span class="stat-number">{{ stats.total_users }}</span>
+        <span class="stat-label">Users</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+        <span class="stat-number">{{ stats.total_files }}</span>
+        <span class="stat-label">Files Shared</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+        <span class="stat-number">{{ stats.total_downloads }}</span>
+        <span class="stat-label">Downloads</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+        <span class="stat-number">{{ stats.encrypted_files }}</span>
+        <span class="stat-label">Encrypted Files</span>
+    </div>
+</div>
+
+<!-- Features grid -->
+<div class="features-grid">
+    <div class="feature-card">
+        <div class="feature-icon">🔗</div>
+        <h3>Shareable Links</h3>
+        <p>Every upload gets a unique link and QR code. Share it with anyone to let them download your file.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Password Protection</h3>
+        <p>Add a password to your shared links. Only people with the password can access the file.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h3>End-to-End Encryption</h3>
+        <p>Files are encrypted in your browser before upload using AES-256-GCM. Not even the server can read them.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">⏱️</div>
+        <h3>Expiring Links</h3>
+        <p>Set links to expire after 24 hours, 7 days, or 30 days. Files are automatically cleaned up.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">👥</div>
+        <h3>Friends & Sharing</h3>
+        <p>Add friends and share files directly with them. Chat and send files in real time.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h3>QR Codes</h3>
+        <p>Every shared file gets a QR code. Scan it with your phone for instant access.</p>
+    </div>
+</div>
+
+<!-- Supported file types -->
+<div class="card mt-4">
+    <h2 class="center">Supported File Types</h2>
+    <p class="center mb-2">Upload virtually any file type up to 100MB</p>
+    <div class="filetypes-grid">
+        <div class="filetype-chip">
+            <span class="filetype-icon">📄</span>
+            <span>PDF</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">🖼️</span>
+            <span>PNG</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">🖼️</span>
+            <span>JPG</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">🖼️</span>
+            <span>GIF</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">📝</span>
+            <span>DOC/DOCX</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">📊</span>
+            <span>XLSX</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">📊</span>
+            <span>PPTX</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">📋</span>
+            <span>CSV</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">📦</span>
+            <span>ZIP</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">🎵</span>
+            <span>MP3</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">🎵</span>
+            <span>WAV</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">🎬</span>
+            <span>MP4</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">🎬</span>
+            <span>MOV</span>
+        </div>
+        <div class="filetype-chip">
+            <span class="filetype-icon">📃</span>
+            <span>TXT</span>
+        </div>
+    </div>
+</div>
+
+<!-- How it works -->
+<div class="card mt-4">
+    <h2 class="center">How It Works</h2>
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <div>
+                <h3 class="mt-0">Upload</h3>
+                <p class="mt-0">Drag and drop your files or click to browse. Supports PDFs, images, documents, audio, video, and more.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-number">2</div>
+            <div>
+                <h3 class="mt-0">Configure</h3>
+                <p class="mt-0">Choose an expiration time, add a password, or enable end-to-end encryption for maximum security.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-number">3</div>
+            <div>
+                <h3 class="mt-0">Share</h3>
+                <p class="mt-0">Get a unique link and QR code. Send it to anyone or share directly with friends on the platform.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Security trust section -->
+<div class="card mt-4">
+    <h2 class="center">Built with Security in Mind</h2>
+    <p class="center mb-2">Your files and data are protected at every layer</p>
+    <div class="security-grid">
+        <div class="security-item">
+            <div class="security-item-header">
+                <span class="security-icon">🔐</span>
+                <h3>AES-256-GCM Encryption</h3>
+            </div>
+            <p>Client-side encryption using the Web Crypto API. Files are encrypted in your browser before they ever leave your device.</p>
+        </div>
+        <div class="security-item">
+            <div class="security-item-header">
+                <span class="security-icon">🧂</span>
+                <h3>Salted Password Hashing</h3>
+            </div>
+            <p>All passwords are hashed with unique salts using Werkzeug's security module. Plaintext passwords are never stored.</p>
+        </div>
+        <div class="security-item">
+            <div class="security-item-header">
+                <span class="security-icon">🛡️</span>
+                <h3>CSRF Protection</h3>
+            </div>
+            <p>Every form submission is verified with a unique CSRF token to prevent cross-site request forgery attacks.</p>
+        </div>
+        <div class="security-item">
+            <div class="security-item-header">
+                <span class="security-icon">⏳</span>
+                <h3>Rate Limiting</h3>
+            </div>
+            <p>Login attempts are rate-limited to prevent brute force attacks. Accounts are temporarily locked after too many failed tries.</p>
+        </div>
+        <div class="security-item">
+            <div class="security-item-header">
+                <span class="security-icon">🔑</span>
+                <h3>Secure Token Generation</h3>
+            </div>
+            <p>Share links use cryptographically secure random tokens, making them impossible to guess or enumerate.</p>
+        </div>
+        <div class="security-item">
+            <div class="security-item-header">
+                <span class="security-icon">📁</span>
+                <h3>File Validation</h3>
+            </div>
+            <p>Uploads are validated by file extension and MIME type with a strict whitelist. Maximum file size is enforced server-side.</p>
+        </div>
+    </div>
+</div>
+
+<div class="center mt-4 mb-3">
+    <a href="{{ url_for('register') }}" class="btn btn-lg">Create Your Free Account</a>
+</div>
+
+{% endif %}
 
 {% endblock %}

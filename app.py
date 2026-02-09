@@ -248,7 +248,53 @@ def generate_qr_code(url):
 # Homepage route
 @app.route('/')
 def index():
-    return render_template('Reg_Log_index.html')
+    db = get_db()
+    stats = {}
+    user_stats = {}
+    recent_files = []
+    friend_count = 0
+
+    try:
+        stats['total_files'] = db.execute("SELECT COUNT(*) FROM files").fetchone()[0]
+        stats['total_users'] = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        stats['total_downloads'] = db.execute("SELECT COALESCE(SUM(download_count), 0) FROM files").fetchone()[0]
+        stats['encrypted_files'] = db.execute("SELECT COUNT(*) FROM files WHERE is_encrypted = 1").fetchone()[0]
+    except Exception:
+        stats = {'total_files': 0, 'total_users': 0, 'total_downloads': 0, 'encrypted_files': 0}
+
+    if g.user:
+        try:
+            user_id = session.get('user_id')
+            user_stats['my_files'] = db.execute(
+                "SELECT COUNT(*) FROM files WHERE user_id = ?", (user_id,)
+            ).fetchone()[0]
+            user_stats['my_downloads'] = db.execute(
+                "SELECT COALESCE(SUM(download_count), 0) FROM files WHERE user_id = ?", (user_id,)
+            ).fetchone()[0]
+            user_stats['active_files'] = db.execute(
+                "SELECT COUNT(*) FROM files WHERE user_id = ? AND expiry_date > ?",
+                (user_id, datetime.now().isoformat())
+            ).fetchone()[0]
+            user_stats['expired_files'] = user_stats['my_files'] - user_stats['active_files']
+
+            friend_count = db.execute(
+                "SELECT COUNT(*) FROM friends WHERE (user_id = ? OR friend_id = ?) AND status = 'accepted'",
+                (user_id, user_id)
+            ).fetchone()[0]
+
+            recent_files = db.execute(
+                """SELECT original_filename, file_size, upload_date, share_token, expiry_date,
+                          is_encrypted, download_count
+                   FROM files WHERE user_id = ?
+                   ORDER BY upload_date DESC LIMIT 5""",
+                (user_id,)
+            ).fetchall()
+        except Exception:
+            user_stats = {'my_files': 0, 'my_downloads': 0, 'active_files': 0, 'expired_files': 0}
+
+    return render_template('Reg_Log_index.html', stats=stats, user_stats=user_stats,
+                           recent_files=recent_files, friend_count=friend_count,
+                           now=datetime.now().isoformat())
 
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
