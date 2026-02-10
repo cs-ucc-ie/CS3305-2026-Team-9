@@ -85,6 +85,24 @@
                 iframe.src = URL.createObjectURL(blob);
                 iframe.className = 'preview-iframe';
                 container.appendChild(iframe);
+                {% elif is_video %}
+                const vidMimeMap = { 'mp4': 'video/mp4', 'mov': 'video/mp4', 'avi': 'video/x-msvideo', 'webm': 'video/webm' };
+                const vidBlob = new Blob([decrypted], { type: vidMimeMap['{{ file_ext }}'] || 'video/mp4' });
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(vidBlob);
+                video.controls = true;
+                video.className = 'preview-video';
+                container.appendChild(video);
+                {% elif is_audio %}
+                const audMimeMap = { 'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'ogg': 'audio/ogg', 'flac': 'audio/flac' };
+                const audBlob = new Blob([decrypted], { type: audMimeMap['{{ file_ext }}'] || 'audio/mpeg' });
+                container.innerHTML = '<div class="preview-icon">🎵</div><h3>{{ file_info.original_filename }}</h3>';
+                container.className = 'preview-media preview-audio-container';
+                const audio = document.createElement('audio');
+                audio.src = URL.createObjectURL(audBlob);
+                audio.controls = true;
+                audio.className = 'preview-audio';
+                container.appendChild(audio);
                 {% else %}
                 container.innerHTML = '<div class="preview-icon">📎</div>' +
                     '<h3>Preview not available for this file type</h3>' +
@@ -113,6 +131,26 @@
             <iframe src="{{ url_for('serve_file', token=token) }}" class="preview-iframe"></iframe>
         </div>
 
+    {% elif is_video %}
+        <div class="preview-media">
+            <video controls preload="metadata" class="preview-video">
+                <source src="{{ url_for('serve_file', token=token) }}"
+                        type="video/{{ 'mp4' if file_ext in ['mp4', 'mov'] else file_ext }}">
+                Your browser does not support video playback.
+            </video>
+        </div>
+
+    {% elif is_audio %}
+        <div class="preview-media preview-audio-container">
+            <div class="preview-icon">🎵</div>
+            <h3>{{ file_info.original_filename }}</h3>
+            <audio controls preload="metadata" class="preview-audio">
+                <source src="{{ url_for('serve_file', token=token) }}"
+                        type="audio/{{ 'mpeg' if file_ext == 'mp3' else file_ext }}">
+                Your browser does not support audio playback.
+            </audio>
+        </div>
+
     {% else %}
         <div class="preview-no-preview">
             <div class="preview-icon">
@@ -122,10 +160,6 @@
                     📝
                 {% elif file_ext in ['zip', 'rar'] %}
                     📦
-                {% elif file_ext in ['mp3', 'wav'] %}
-                    🎵
-                {% elif file_ext in ['mp4', 'mov'] %}
-                    🎬
                 {% else %}
                     📎
                 {% endif %}

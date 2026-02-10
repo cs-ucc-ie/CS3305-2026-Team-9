@@ -2,7 +2,9 @@ import sqlite3
 import os
 from flask import g
 
-DATABASE = 'sharelink.db'
+# Use absolute path so it works on PythonAnywhere
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE = os.path.join(BASE_DIR, 'sharelink.db')
 
 def get_db():
     """Get database connection, reusing per-request if available"""
@@ -35,6 +37,12 @@ def init_db():
     #Add profile picture
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN profile_picture TEXT")
+    except Exception:
+        pass  # Column already exists
+
+    # Add is_admin column
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
     except Exception:
         pass  # Column already exists
     

@@ -4,7 +4,8 @@
   "description": "File sharing application",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder"
   },
   "repository": {
     "type": "git",
@@ -20,5 +21,8 @@
   "homepage": "https://github.com/cs-ucc-ie/CS3305-2026-Team-9#readme",
   "dependencies": {
     "electron": "^40.0.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^26.7.0"
   }
 }

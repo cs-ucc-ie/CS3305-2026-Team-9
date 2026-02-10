@@ -87,6 +87,9 @@
 
 <p class="mb-2">
     <a href="{{ url_for('upload') }}" class="btn">Upload New File</a>
+    {% if files %}
+    <a href="{{ url_for('download_all') }}" class="btn btn-secondary" onclick="showToast('Preparing ZIP download...', 'info')">📦 Download All as ZIP</a>
+    {% endif %}
 </p>
 
 <div class="card">
@@ -158,6 +161,7 @@
                         <a href="{{ url_for('preview', token=file.share_token) }}" class="btn btn-secondary btn-sm btn-inline">👁️ Preview</a>
                         <a href="{{ url_for('download', token=file.share_token) }}" class="btn btn-sm btn-inline">Download</a>
                         <button onclick="copyShareLink('{{ request.url_root }}download/{{ file.share_token }}')" class="btn btn-secondary btn-sm btn-inline">📋 Copy</button>
+                        <button onclick="openRename('{{ file.share_token }}', '{{ file.original_filename }}')" class="btn btn-secondary btn-sm btn-inline">✏️ Rename</button>
                         <form action="{{ url_for('delete_file', token=file.share_token) }}" method="POST" class="form-inline" onsubmit="return confirm('Are you sure you want to delete this file? This cannot be undone.');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
@@ -211,16 +215,79 @@
     {% endif %}
 </div>
 
+<!-- Rename modal -->
+<div id="renameModal" class="modal-overlay" onclick="if(event.target===this)closeRename()">
+    <div class="modal-box">
+        <h3>Rename File</h3>
+        <input type="text" id="renameInput" placeholder="Enter new filename"
+               onkeydown="if(event.key==='Enter')submitRename()">
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeRename()">Cancel</button>
+            <button type="button" class="btn btn-sm" onclick="submitRename()">Rename</button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
 function copyShareLink(link) {
     navigator.clipboard.writeText(link).then(() => {
-        alert('Share link copied to clipboard!');
+        showToast('Share link copied to clipboard!', 'success');
     }).catch(err => {
         console.error('Failed to copy:', err);
-        alert('Failed to copy link');
+        showToast('Failed to copy link', 'error');
+    });
+}
+
+// Rename functionality
+var renameToken = '';
+
+function openRename(token, currentName) {
+    renameToken = token;
+    var input = document.getElementById('renameInput');
+    // Strip extension for easier editing
+    var dotIndex = currentName.lastIndexOf('.');
+    input.value = dotIndex > 0 ? currentName.substring(0, dotIndex) : currentName;
+    document.getElementById('renameModal').classList.add('modal-visible');
+    setTimeout(function() { input.focus(); input.select(); }, 100);
+}
+
+function closeRename() {
+    document.getElementById('renameModal').classList.remove('modal-visible');
+    renameToken = '';
+}
+
+function submitRename() {
+    var newName = document.getElementById('renameInput').value.trim();
+    if (!newName) {
+        showToast('Name cannot be empty', 'warning');
+        return;
+    }
+
+    var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    var formData = new FormData();
+    formData.append('new_name', newName);
+
+    fetch('/rename/' + renameToken, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken },
+        body: formData
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.success) {
+            showToast('File renamed to ' + data.new_name, 'success');
+            closeRename();
+            // Reload to reflect changes
+            setTimeout(function() { location.reload(); }, 800);
+        } else {
+            showToast(data.error || 'Rename failed', 'error');
+        }
+    })
+    .catch(function() {
+        showToast('Rename failed', 'error');
     });
 }
 </script>

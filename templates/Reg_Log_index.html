@@ -84,7 +84,7 @@
                     </td>
                     <td>
                         <a href="{{ url_for('preview', token=file.share_token) }}" class="btn btn-sm">Preview</a>
-                        <button onclick="navigator.clipboard.writeText('{{ request.url_root }}download/{{ file.share_token }}').then(()=>alert('Link copied!'))" class="btn btn-sm btn-secondary">Copy Link</button>
+                        <button onclick="navigator.clipboard.writeText('{{ request.url_root }}download/{{ file.share_token }}').then(()=>showToast('Link copied!','success'))" class="btn btn-sm btn-secondary">Copy Link</button>
                     </td>
                 </tr>
                 {% endfor %}

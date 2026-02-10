@@ -84,9 +84,10 @@
     function copyLink() {
         const linkText = document.getElementById('shareLink').textContent;
         navigator.clipboard.writeText(linkText).then(() => {
-            alert('Link copied to clipboard!');
+            showToast('Link copied to clipboard!', 'success');
         }).catch(err => {
             console.error('Failed to copy:', err);
+            showToast('Failed to copy link', 'error');
         });
     }
 </script>

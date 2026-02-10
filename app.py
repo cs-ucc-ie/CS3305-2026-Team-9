@@ -3,7 +3,7 @@ import re
 import secrets
 import time
 from collections import defaultdict
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, session, g, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, send_file, session, g, jsonify
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from database import get_db, close_db, init_db
@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 import qrcode
 import io
 import base64
+import zipfile
 from storage import save_file, save_zip, get_file_response, delete_file as storage_delete_file
 
 # Simple in-memory rate limiter for login attempts
@@ -41,18 +42,31 @@ def load_profile_picture():
     if "user_id" in session:
         db = get_db()
         row = db.execute(
-            "SELECT profile_picture FROM users WHERE user_id = ?",
+            "SELECT profile_picture, is_admin FROM users WHERE user_id = ?",
             (session["user_id"],)
         ).fetchone()
         g.profile_picture = row["profile_picture"] if row and row["profile_picture"] else None
+        g.is_admin = bool(row["is_admin"]) if row else False
     else:
         g.profile_picture = None
-    
+        g.is_admin = False
+
 def login_required(view):
     @wraps(view)
     def wrapped_view(*args, **kwargs):
         if g.user is None:
             return redirect(url_for("login", next=request.url))
+        return view(*args, **kwargs)
+    return wrapped_view
+
+def admin_required(view):
+    @wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if g.user is None:
+            return redirect(url_for("login", next=request.url))
+        if not g.is_admin:
+            flash('You do not have admin access.', 'error')
+            return redirect(url_for('index'))
         return view(*args, **kwargs)
     return wrapped_view
 
@@ -183,8 +197,9 @@ def upload_profile_picture():
 
 
 
-# Configuration
-UPLOAD_FOLDER = 'uploads'
+# Configuration — use absolute paths for PythonAnywhere compatibility
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'doc', 'docx', 'mp3', 'mp4', 'wav', 'mov', 'avi', 'csv', 'xlsx', 'pptx'}
 
@@ -596,6 +611,97 @@ def change_password():
     flash("Password updated successfully", "success")
     return redirect(url_for("settings"))
 
+# Admin dashboard
+@app.route("/admin")
+@admin_required
+def admin_dashboard():
+    db = get_db()
+
+    # System stats
+    stats = {}
+    stats['total_users'] = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    stats['total_files'] = db.execute("SELECT COUNT(*) FROM files").fetchone()[0]
+    stats['total_downloads'] = db.execute("SELECT COALESCE(SUM(download_count), 0) FROM files").fetchone()[0]
+    stats['encrypted_files'] = db.execute("SELECT COUNT(*) FROM files WHERE is_encrypted = 1").fetchone()[0]
+    stats['active_files'] = db.execute(
+        "SELECT COUNT(*) FROM files WHERE expiry_date > ?",
+        (datetime.now().isoformat(),)
+    ).fetchone()[0]
+    stats['expired_files'] = stats['total_files'] - stats['active_files']
+    stats['total_shares'] = db.execute("SELECT COUNT(*) FROM shared_files").fetchone()[0]
+    stats['total_messages'] = db.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
+    stats['total_friendships'] = db.execute(
+        "SELECT COUNT(*) FROM friends WHERE status = 'accepted'"
+    ).fetchone()[0]
+
+    # Storage usage
+    storage_bytes = db.execute("SELECT COALESCE(SUM(file_size), 0) FROM files").fetchone()[0]
+    stats['storage_used_mb'] = round(storage_bytes / 1024 / 1024, 2)
+    stats['storage_used_gb'] = round(storage_bytes / 1024 / 1024 / 1024, 2)
+
+    # Most active users (by upload count)
+    top_uploaders = db.execute("""
+        SELECT user_id, COUNT(*) as file_count,
+               COALESCE(SUM(file_size), 0) as total_size,
+               COALESCE(SUM(download_count), 0) as total_downloads
+        FROM files GROUP BY user_id
+        ORDER BY file_count DESC LIMIT 10
+    """).fetchall()
+
+    # Recent uploads (last 20)
+    recent_files = db.execute("""
+        SELECT original_filename, file_size, user_id, upload_date, expiry_date,
+               is_encrypted, download_count, share_token
+        FROM files ORDER BY upload_date DESC LIMIT 20
+    """).fetchall()
+
+    # All users with their stats
+    users = db.execute("""
+        SELECT u.user_id, u.is_admin, u.profile_picture,
+               COUNT(f.id) as file_count,
+               COALESCE(SUM(f.file_size), 0) as total_size
+        FROM users u
+        LEFT JOIN files f ON u.user_id = f.user_id
+        GROUP BY u.user_id
+        ORDER BY file_count DESC
+    """).fetchall()
+
+    # Largest files
+    largest_files = db.execute("""
+        SELECT original_filename, file_size, user_id, upload_date, share_token
+        FROM files ORDER BY file_size DESC LIMIT 10
+    """).fetchall()
+
+    return render_template("admin.html",
+                           stats=stats,
+                           top_uploaders=top_uploaders,
+                           recent_files=recent_files,
+                           users=users,
+                           largest_files=largest_files,
+                           now=datetime.now().isoformat())
+
+# Toggle admin status for a user
+@app.route("/admin/toggle-admin/<user_id>", methods=["POST"])
+@admin_required
+def toggle_admin(user_id):
+    if user_id == session.get('user_id'):
+        flash("You cannot change your own admin status.", "error")
+        return redirect(url_for('admin_dashboard'))
+
+    db = get_db()
+    user = db.execute("SELECT is_admin FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if user is None:
+        flash("User not found.", "error")
+        return redirect(url_for('admin_dashboard'))
+
+    new_status = 0 if user['is_admin'] else 1
+    db.execute("UPDATE users SET is_admin = ? WHERE user_id = ?", (new_status, user_id))
+    db.commit()
+
+    action = "granted" if new_status else "revoked"
+    flash(f"Admin access {action} for {user_id}.", "success")
+    return redirect(url_for('admin_dashboard'))
+
 # Add a friend
 @app.route('/add_friend', methods=['POST'])
 @login_required
@@ -726,6 +832,86 @@ def delete_file(token):
     flash('File deleted successfully', 'success')
     return redirect(url_for('dashboard'))
 
+# Download all files as ZIP
+@app.route("/download-all")
+@login_required
+def download_all():
+    user_id = session.get('user_id')
+    db = get_db()
+
+    files = db.execute(
+        """SELECT filename, original_filename FROM files
+           WHERE user_id = ? AND expiry_date > ? AND is_encrypted = 0""",
+        (user_id, datetime.now().isoformat())
+    ).fetchall()
+
+    if not files:
+        flash('No downloadable files found. Encrypted files cannot be bulk-downloaded.', 'error')
+        return redirect(url_for('dashboard'))
+
+    zip_buffer = io.BytesIO()
+    upload_folder = app.config['UPLOAD_FOLDER']
+    use_cloud = os.getenv('USE_CLOUD_STORAGE', 'false').lower() == 'true'
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for f in files:
+            if use_cloud:
+                try:
+                    from storage import _get_s3_client, _get_bucket
+                    client = _get_s3_client()
+                    bucket = _get_bucket()
+                    obj = client.get_object(Bucket=bucket, Key=f['filename'])
+                    zipf.writestr(f['original_filename'], obj['Body'].read())
+                except Exception:
+                    continue
+            else:
+                filepath = os.path.join(upload_folder, f['filename'])
+                if os.path.exists(filepath):
+                    zipf.write(filepath, f['original_filename'])
+
+    zip_buffer.seek(0)
+    return send_file(
+        zip_buffer,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=f'sharelink-files-{user_id}.zip'
+    )
+
+# Rename a file
+@app.route("/rename/<token>", methods=["POST"])
+@login_required
+def rename_file(token):
+    user_id = session.get('user_id')
+    new_name = request.form.get('new_name', '').strip()
+
+    if not new_name:
+        return jsonify({'success': False, 'error': 'Name cannot be empty'}), 400
+
+    # Preserve the original file extension
+    db = get_db()
+    file_info = db.execute(
+        'SELECT * FROM files WHERE share_token = ? AND user_id = ?',
+        (token, user_id)
+    ).fetchone()
+
+    if file_info is None:
+        return jsonify({'success': False, 'error': 'File not found'}), 404
+
+    old_name = file_info['original_filename']
+    old_ext = old_name.rsplit('.', 1)[1].lower() if '.' in old_name else ''
+
+    # If user didn't include extension, add the original one
+    if '.' not in new_name and old_ext:
+        new_name = new_name + '.' + old_ext
+
+    db.execute(
+        'UPDATE files SET original_filename = ? WHERE share_token = ? AND user_id = ?',
+        (new_name, token, user_id)
+    )
+    db.commit()
+
+    return jsonify({'success': True, 'new_name': new_name})
+
 # Share a file with a friend
 @app.route("/share/<token>", methods=["POST"])
 @login_required
@@ -807,9 +993,13 @@ def preview(token):
     file_ext = file_info['original_filename'].rsplit('.', 1)[1].lower() if '.' in file_info['original_filename'] else ''
     is_image = file_ext in ['jpg', 'jpeg', 'png', 'gif']
     is_pdf = file_ext == 'pdf'
-    
+    is_video = file_ext in ['mp4', 'mov', 'avi', 'webm']
+    is_audio = file_ext in ['mp3', 'wav', 'ogg', 'flac']
+
     return render_template('preview.html', file_info=file_info, token=token,
-                          is_image=is_image, is_pdf=is_pdf, file_ext=file_ext,
+                          is_image=is_image, is_pdf=is_pdf,
+                          is_video=is_video, is_audio=is_audio,
+                          file_ext=file_ext,
                           encryption_key=file_info['encryption_key'] or '')
 
 
@@ -1067,7 +1257,8 @@ def chat_my_files():
 def cleanup_expired_files():
     """Remove expired files from storage and database."""
     import sqlite3
-    conn = sqlite3.connect('sharelink.db')
+    from database import DATABASE
+    conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     expired = conn.execute(
         "SELECT * FROM files WHERE expiry_date < ?",

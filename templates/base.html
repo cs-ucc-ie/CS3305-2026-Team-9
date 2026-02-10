@@ -38,6 +38,9 @@
                 </div>
                 <a href="{{ url_for('dashboard') }}">Dashboard</a>
                 <a href="{{ url_for('upload') }}">Upload</a>
+                {% if g.is_admin %}
+                <a href="{{ url_for('admin_dashboard') }}">Admin</a>
+                {% endif %}
                 <a href="{{ url_for('logout') }}">Logout</a>
 {% else %}
                 <a href="{{ url_for('register') }}">Register</a>
@@ -92,6 +95,37 @@
 
         <script src="{{ url_for('static', filename='chat.js') }}"></script>
         {% endif %}
+
+        <!-- Toast container -->
+        <div id="toastContainer" class="toast-container"></div>
+
+        <script>
+            // Toast notification system
+            function showToast(message, type) {
+                type = type || 'success';
+                var container = document.getElementById('toastContainer');
+                var toast = document.createElement('div');
+                toast.className = 'toast toast-' + type;
+
+                var icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
+                toast.innerHTML = '<span class="toast-icon">' + (icons[type] || icons.info) + '</span>' +
+                    '<span class="toast-message">' + message + '</span>';
+
+                container.appendChild(toast);
+
+                // Trigger animation
+                requestAnimationFrame(function() {
+                    toast.classList.add('toast-show');
+                });
+
+                // Auto remove after 3 seconds
+                setTimeout(function() {
+                    toast.classList.remove('toast-show');
+                    toast.classList.add('toast-hide');
+                    setTimeout(function() { toast.remove(); }, 300);
+                }, 3000);
+            }
+        </script>
 
         <script>
             // Theme toggle

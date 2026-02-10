@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - ShareLink{% endblock %}
+
+{% block main_content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="message {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="admin-header">
+    <h1>Admin Dashboard</h1>
+    <p class="text-muted">System overview and management</p>
+</div>
+
+<!-- System stats grid -->
+<div class="admin-stats-grid">
+    <div class="admin-stat-card">
+        <span class="admin-stat-number">{{ stats.total_users }}</span>
+        <span class="admin-stat-label">Total Users</span>
+    </div>
+    <div class="admin-stat-card">
+        <span class="admin-stat-number">{{ stats.total_files }}</span>
+        <span class="admin-stat-label">Total Files</span>
+    </div>
+    <div class="admin-stat-card">
+        <span class="admin-stat-number">{{ stats.active_files }}</span>
+        <span class="admin-stat-label">Active Files</span>
+    </div>
+    <div class="admin-stat-card">
+        <span class="admin-stat-number">{{ stats.expired_files }}</span>
+        <span class="admin-stat-label">Expired Files</span>
+    </div>
+    <div class="admin-stat-card">
+        <span class="admin-stat-number">{{ stats.total_downloads }}</span>
+        <span class="admin-stat-label">Total Downloads</span>
+    </div>
+    <div class="admin-stat-card">
+        <span class="admin-stat-number">{{ stats.encrypted_files }}</span>
+        <span class="admin-stat-label">Encrypted Files</span>
+    </div>
+    <div class="admin-stat-card">
+        <span class="admin-stat-number">{{ stats.storage_used_mb }} MB</span>
+        <span class="admin-stat-label">Storage Used</span>
+    </div>
+    <div class="admin-stat-card">
+        <span class="admin-stat-number">{{ stats.total_messages }}</span>
+        <span class="admin-stat-label">Messages Sent</span>
+    </div>
+    <div class="admin-stat-card">
+        <span class="admin-stat-number">{{ stats.total_friendships }}</span>
+        <span class="admin-stat-label">Friendships</span>
+    </div>
+    <div class="admin-stat-card">
+        <span class="admin-stat-number">{{ stats.total_shares }}</span>
+        <span class="admin-stat-label">File Shares</span>
+    </div>
+</div>
+
+<!-- Top uploaders -->
+<div class="card mt-4">
+    <h2>Top Uploaders</h2>
+    {% if top_uploaders %}
+    <div class="table-wrapper">
+        <table class="file-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>User</th>
+                    <th>Files</th>
+                    <th>Storage Used</th>
+                    <th>Downloads</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in top_uploaders %}
+                <tr>
+                    <td><span class="admin-rank">{{ loop.index }}</span></td>
+                    <td><strong>{{ user.user_id }}</strong></td>
+                    <td>{{ user.file_count }}</td>
+                    <td>{{ "%.2f"|format(user.total_size / 1024 / 1024) }} MB</td>
+                    <td><span class="download-badge">{{ user.total_downloads }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No uploads yet.</p>
+    {% endif %}
+</div>
+
+<!-- All users management -->
+<div class="card mt-4">
+    <h2>User Management ({{ users|length }})</h2>
+    <div class="table-wrapper">
+        <table class="file-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Files</th>
+                    <th>Storage</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        {% if user.profile_picture %}
+                            <img src="{{ url_for('static', filename='profiles/' ~ user.profile_picture) }}"
+                                 class="header-avatar" style="width:24px;height:24px;vertical-align:middle;margin-right:6px;">
+                        {% endif %}
+                        <strong>{{ user.user_id }}</strong>
+                    </td>
+                    <td>{{ user.file_count }}</td>
+                    <td>{{ "%.2f"|format(user.total_size / 1024 / 1024) }} MB</td>
+                    <td>
+                        {% if user.is_admin %}
+                            <span class="admin-badge admin-badge-admin">Admin</span>
+                        {% else %}
+                            <span class="admin-badge admin-badge-user">User</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.user_id != g.user %}
+                        <form method="POST" action="{{ url_for('toggle_admin', user_id=user.user_id) }}" class="form-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            {% if user.is_admin %}
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Revoke admin access for {{ user.user_id }}?')">Revoke Admin</button>
+                            {% else %}
+                                <button type="submit" class="btn btn-sm" onclick="return confirm('Grant admin access to {{ user.user_id }}?')">Make Admin</button>
+                            {% endif %}
+                        </form>
+                        {% else %}
+                            <span class="text-muted text-sm">You</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Recent uploads -->
+<div class="card mt-4">
+    <h2>Recent Uploads</h2>
+    {% if recent_files %}
+    <div class="table-wrapper">
+        <table class="file-table">
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>User</th>
+                    <th>Size</th>
+                    <th>Uploaded</th>
+                    <th>Downloads</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for file in recent_files %}
+                <tr>
+                    <td>
+                        {{ file.original_filename }}
+                        {% if file.is_encrypted %}
+                            <span class="status-encrypted">E2E</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ file.user_id }}</td>
+                    <td>{{ "%.2f"|format(file.file_size / 1024 / 1024) }} MB</td>
+                    <td>{{ file.upload_date[:16] }}</td>
+                    <td><span class="download-badge">{{ file.download_count }}</span></td>
+                    <td>
+                        {% if file.expiry_date > now %}
+                            <span class="status-active">Active</span>
+                        {% else %}
+                            <span class="status-expired">Expired</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No files uploaded yet.</p>
+    {% endif %}
+</div>
+
+<!-- Largest files -->
+<div class="card mt-4">
+    <h2>Largest Files</h2>
+    {% if largest_files %}
+    <div class="table-wrapper">
+        <table class="file-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>File</th>
+                    <th>User</th>
+                    <th>Size</th>
+                    <th>Uploaded</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for file in largest_files %}
+                <tr>
+                    <td><span class="admin-rank">{{ loop.index }}</span></td>
+                    <td>{{ file.original_filename }}</td>
+                    <td>{{ file.user_id }}</td>
+                    <td><strong>{{ "%.2f"|format(file.file_size / 1024 / 1024) }} MB</strong></td>
+                    <td>{{ file.upload_date[:16] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No files uploaded yet.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

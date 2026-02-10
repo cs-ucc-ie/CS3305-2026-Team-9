@@ -177,7 +177,7 @@ document.querySelector('.upload-form').addEventListener('submit', async function
 
     const files = fileInput.files;
     if (!files || files.length === 0) {
-        alert('Please select at least one file.');
+        showToast('Please select at least one file.', 'warning');
         return;
     }
 
@@ -275,7 +275,7 @@ document.querySelector('.upload-form').addEventListener('submit', async function
                     window.location.href = xhr.responseURL;
                 }
             } else {
-                alert('Upload failed (status ' + xhr.status + '). Please try again.');
+                showToast('Upload failed (status ' + xhr.status + '). Please try again.', 'error');
                 submitBtn.disabled = false;
                 progressContainer.classList.add('hidden');
                 uploadForm.classList.remove('hidden');
@@ -283,7 +283,7 @@ document.querySelector('.upload-form').addEventListener('submit', async function
         };
 
         xhr.onerror = function() {
-            alert('Upload failed. Please check your connection and try again.');
+            showToast('Upload failed. Please check your connection and try again.', 'error');
             submitBtn.disabled = false;
             progressContainer.classList.add('hidden');
             uploadForm.classList.remove('hidden');
@@ -293,7 +293,7 @@ document.querySelector('.upload-form').addEventListener('submit', async function
 
     } catch (err) {
         console.error('Upload error:', err);
-        alert('Upload error: ' + err.message);
+        showToast('Upload error: ' + err.message, 'error');
         submitBtn.disabled = false;
         progressContainer.classList.add('hidden');
         uploadForm.classList.remove('hidden');
