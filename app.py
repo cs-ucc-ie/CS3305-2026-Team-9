@@ -1030,6 +1030,17 @@ def preview(token):
 
         return redirect(url_for('index'))
     
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file_info['filename'])
+    try:
+        with open(filepath, 'rb') as f:
+            file_checksum = compute_checksum(f)
+        if file_checksum != file_info['checksum']:
+            flash('The file may be corrupted, and cannot be previewed.', 'error')
+            return redirect(url_for('dashboard'))
+    except Exception:
+        flash('Error verifying file integrity.', 'error')
+        return redirect(url_for('dashboard'))
+    
     # Check if password protected
     if file_info['password_hash']:
         if request.method == 'GET':
