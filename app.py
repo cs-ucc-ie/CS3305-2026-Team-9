@@ -439,14 +439,14 @@ def download(token):
     if file_info is None:
         flash('File not found or link expired', 'error')
 
-        return redirect(url_for('index'))
+        return redirect(url_for('dashboard'))
     
     # Check if link has expired
     expiry_date = datetime.fromisoformat(file_info['expiry_date'])
     if datetime.now() > expiry_date:
         flash('This link has expired', 'error')
 
-        return redirect(url_for('index'))
+        return redirect(url_for('dashboard'))
     
     # Check if password protected
     if file_info['password_hash']:
@@ -472,12 +472,12 @@ def download(token):
             file_checksum = compute_checksum(f)
         if file_checksum != file_info['checksum']:
             flash('File integrity check failed. The file may be corrupted.', 'error')
-            return redirect(url_for('index'))
+            return redirect(url_for('dashboard'))
     except Exception:
         flash('Error verifying file integrity.', 'error')
-        return redirect(url_for('index'))
+        return redirect(url_for('dashboard'))
     
-    # Increment download count
+    # Increment download countf
     db.execute('UPDATE files SET download_count = download_count + 1 WHERE share_token = ?', (token,))
     db.commit()
 
@@ -869,8 +869,9 @@ def download_all():
     user_id = session.get('user_id')
     db = get_db()
 
+    # fetch checksum as well so we can verify integrity before zipping
     files = db.execute(
-        """SELECT filename, original_filename FROM files
+        """SELECT filename, original_filename, checksum FROM files
            WHERE user_id = ? AND expiry_date > ? AND is_encrypted = 0""",
         (user_id, datetime.now().isoformat())
     ).fetchall()
@@ -882,6 +883,32 @@ def download_all():
     zip_buffer = io.BytesIO()
     upload_folder = app.config['UPLOAD_FOLDER']
     use_cloud = os.getenv('USE_CLOUD_STORAGE', 'false').lower() == 'true'
+
+    # Verify file integrity before adding to zip
+    corrupted_files = []
+    valid_files = []
+    
+    for f in files:
+        filepath = os.path.join(upload_folder, f['filename'])
+        try:
+            with open(filepath, 'rb') as file_obj:
+                file_checksum = compute_checksum(file_obj)
+            if file_checksum != f['checksum']:
+                corrupted_files.append(f['original_filename'])
+            else:
+                valid_files.append(f)
+        except Exception:
+            corrupted_files.append(f['original_filename'])
+    
+    if corrupted_files:
+        flash(f'Cannot download. Corrupted files: {", ".join(corrupted_files)}', 'error')
+        return redirect(url_for('dashboard'))
+    
+    files = valid_files
+    
+    if not files:
+        flash('No valid files to download', 'error')
+        return redirect(url_for('dashboard'))
 
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for f in files:
