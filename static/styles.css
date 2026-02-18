@@ -449,6 +449,43 @@ form {
   max-width: none;
 }
 
+.share-friend-list {
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  margin: 4px 0 8px;
+  padding: 4px 0;
+}
+
+.share-friend-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  margin: 0;
+  font-weight: normal;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.share-friend-option:hover {
+  background: var(--overlay-light-4);
+}
+
+.share-friend-option input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.share-friend-option span {
+  color: var(--text);
+  font-size: 14px;
+}
+
 .form-bare {
   background: none;
   border: none;
