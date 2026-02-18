@@ -4,6 +4,17 @@
 
 {% block main_content %}
 
+<div class="notif-wrapper">
+    <div id="notif-bell" class="notif-bell">
+        🔔
+        <span id="notif-count" class="notif-count hidden"></span>
+    </div>
+</div>
+
+<div id="notif-dropdown" class="notif-dropdown hidden"></div>
+
+
+
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
         {% for category, message in messages %}
@@ -172,17 +183,14 @@
                             Encrypted — share the copied link directly with your friend
                         </p>
                         {% else %}
-                        <form method="POST" action="{{ url_for('share_file', token=file['share_token']) }}" class="form-share" onsubmit="return validateShareForm(this)">
+                        <form method="POST" action="{{ url_for('share_file', token=file['share_token']) }}" class="form-share">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <div class="share-friend-list">
+                            <select name="friend_id">
                                 {% for friend in friends %}
                                     {% set friend_name = friend['friend_id'] if friend['user_id'] == g.user else friend['user_id'] %}
-                                    <label class="share-friend-option">
-                                        <input type="checkbox" name="friend_ids" value="{{ friend_name }}">
-                                        <span>{{ friend_name }}</span>
-                                    </label>
+                                    <option value="{{ friend_name }}">{{ friend_name }}</option>
                                 {% endfor %}
-                            </div>
+                            </select>
                             <button type="submit" class="btn btn-sm">Share</button>
                         </form>
                         {% endif %}
@@ -293,14 +301,65 @@ function submitRename() {
         showToast('Rename failed', 'error');
     });
 }
-
-function validateShareForm(form) {
-    var checked = form.querySelectorAll('input[name="friend_ids"]:checked');
-    if (checked.length === 0) {
-        showToast('Please select at least one friend to share with', 'warning');
-        return false;
-    }
-    return true;
-}
 </script>
+
+
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const bell = document.getElementById("notif-bell");
+    const dropdown = document.getElementById("notif-dropdown");
+    const countElem = document.getElementById("notif-count");
+
+    // Toggle dropdown + mark notifications read
+    bell.onclick = async () => {
+        dropdown.classList.toggle("hidden");
+
+        // Fetch notifications
+        const res = await fetch("/api/notifications");
+        const data = await res.json();
+
+        // Fill dropdown
+        dropdown.innerHTML = data.notifications.length
+            ? data.notifications.map(n => `
+                <div class="notif-item">
+                    <a href="${n.link || '#'}">${n.message}</a>
+                    <div class="notif-item-time">${n.timestamp}</div>
+                </div>
+            `).join("")
+            : `<div class="notif-item">No notifications</div>`;
+
+        // Hide unread badge
+        countElem.classList.add("hidden");
+
+        // Mark as read
+        await fetch("/api/notifications/mark-read", { method: "POST" });
+    };
+
+    // Poll for unread notifications
+    async function pollNotifications() {
+        const res = await fetch("/api/notifications");
+        const data = await res.json();
+
+        const unread = data.notifications.filter(n => !n.is_read).length;
+
+        if (unread > 0) {
+            countElem.textContent = unread;
+            countElem.classList.remove("hidden");
+        } else {
+            countElem.classList.add("hidden");
+        }
+    }
+
+    // Poll every 8 seconds
+    pollNotifications();
+    setInterval(pollNotifications, 8000);
+
+});
+</script>
+
+
+
 {% endblock %}

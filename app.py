@@ -6,7 +6,6 @@ from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, send_file, session, g, jsonify
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
-from app_paths import get_user_data_dir
 from database import get_db, close_db, init_db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_wtf.csrf import CSRFProtect
@@ -25,12 +24,13 @@ login_attempts = defaultdict(list)  # IP -> list of timestamps
 MAX_LOGIN_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 300  # 5 minutes
 
-# Load environment variables from user data directory
-USER_DATA = get_user_data_dir()
-load_dotenv(os.path.join(USER_DATA, '.env'))
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY') or secrets.token_hex(32)
+app.secret_key = os.getenv('SECRET_KEY')
+if not app.secret_key:
+    raise RuntimeError("SECRET_KEY environment variable is not set")
 app.config['WTF_CSRF_ENABLED'] = True
 csrf = CSRFProtect(app)
 
@@ -174,7 +174,7 @@ def upload_profile_picture():
         return redirect(url_for("settings"))
 
     filename = secure_filename(g.user + "_" + file.filename)
-    profiles_dir = os.path.join(USER_DATA, "static", "profiles")
+    profiles_dir = os.path.join(app.root_path, "static", "profiles")
     os.makedirs(profiles_dir, exist_ok=True)
 
     # Delete old profile picture if it exists
@@ -198,8 +198,9 @@ def upload_profile_picture():
 
 
 
-# Configuration — use absolute paths for PythonAnywhere / PyInstaller compatibility
-UPLOAD_FOLDER = os.path.join(USER_DATA, 'uploads')
+# Configuration — use absolute paths for PythonAnywhere compatibility
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'doc', 'docx', 'mp3', 'mp4', 'wav', 'mov', 'avi', 'csv', 'xlsx', 'pptx'}
 
@@ -259,6 +260,15 @@ def generate_qr_code(url):
     img_str = base64.b64encode(buffer.getvalue()).decode()
     
     return f"data:image/png;base64,{img_str}"
+
+def create_notification(user_id, message, link=None):
+    db = get_db()
+    db.execute(
+        "INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)",
+        (user_id, message, link)
+    )
+    db.commit()
+
 
 def compute_checksum(file_obj, chunk_size=8192):
     """Return SHA256 hex digest for a file-like object."""
@@ -772,6 +782,7 @@ def add_friend():
     )
     db.commit()
 
+    create_notification(friend_id, f"{user_id} sent you a friend request", link="/dashboard")
 
     flash("Friend request sent", "success")
     return redirect(url_for("dashboard"))
@@ -788,6 +799,10 @@ def accept_friend(request_id):
     )
     db.commit()
 
+    # Notify the original sender
+    sender = db.execute("SELECT requested_by FROM friends WHERE id=?", (request_id,)).fetchone()
+    if sender:
+        create_notification(sender["requested_by"], f"{user_id} accepted your friend request", link="/dashboard")
 
     flash("Friend request accepted", "success")
     return redirect(url_for("dashboard"))
@@ -968,67 +983,47 @@ def rename_file(token):
 
     return jsonify({'success': True, 'new_name': new_name})
 
-# Share a file with one or more friends
+# Share a file with a friend
 @app.route("/share/<token>", methods=["POST"])
 @login_required
 def share_file(token):
     sender_id = session.get("user_id")
-    receiver_ids = request.form.getlist("friend_ids")
-
-    if not receiver_ids:
-        flash("Please select at least one friend to share with", "error")
-        return redirect(url_for("dashboard"))
+    receiver_id = request.form.get("friend_id")
 
     db = get_db()
 
     file = db.execute(
-        "SELECT * FROM files WHERE share_token = ? AND user_id = ?",
+        "SELECT * FROM files WHERE share_token = ? and user_id = ?",
         (token, sender_id)
     ).fetchone()
 
     if file is None:
         flash("You cannot share this file", "error")
+
         return redirect(url_for("dashboard"))
 
-    shared_with = []
-    skipped = []
+    # Verify receiver is an accepted friend
+    friendship = db.execute(
+        """SELECT * FROM friends
+        WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))
+        AND status = 'accepted'""",
+        (sender_id, receiver_id, receiver_id, sender_id)
+    ).fetchone()
 
-    for receiver_id in receiver_ids:
-        # Verify receiver is an accepted friend
-        friendship = db.execute(
-            """SELECT * FROM friends
-            WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))
-            AND status = 'accepted'""",
-            (sender_id, receiver_id, receiver_id, sender_id)
-        ).fetchone()
+    if friendship is None:
+        flash("You can only share files with friends", "error")
 
-        if friendship is None:
-            skipped.append(receiver_id)
-            continue
+        return redirect(url_for("dashboard"))
 
-        # Prevent duplicate shares
-        existing = db.execute(
-            "SELECT id FROM shared_files WHERE file_id = ? AND sender_id = ? AND receiver_id = ?",
-            (file["id"], sender_id, receiver_id)
-        ).fetchone()
-
-        if existing:
-            skipped.append(receiver_id)
-            continue
-
-        db.execute(
-            "INSERT INTO shared_files (file_id, sender_id, receiver_id) VALUES (?, ?, ?)",
-            (file["id"], sender_id, receiver_id)
-        )
-        shared_with.append(receiver_id)
-
+    db.execute(
+        "INSERT INTO shared_files (file_id, sender_id, receiver_id) VALUES (?, ?, ?)",
+        (file["id"], sender_id, receiver_id)
+    )
     db.commit()
 
-    if shared_with:
-        flash(f"File shared with: {', '.join(shared_with)}", "success")
-    if skipped:
-        flash(f"Could not share with: {', '.join(skipped)} (not friends or already shared)", "error")
+    create_notification(receiver_id, f"{sender_id} shared a file with you", link=f"/download/{token}")
 
+    flash("File shared", "success")
     return redirect(url_for("dashboard"))
 
 # File preview route
@@ -1130,6 +1125,7 @@ def are_friends(db, user_a, user_b):
            AND status = 'accepted'""",
         (user_a, user_b, user_b, user_a)
     ).fetchone()
+
 
 
 @app.route('/api/chat/friends')
@@ -1249,6 +1245,8 @@ def chat_send():
     )
     db.commit()
 
+    create_notification(receiver_id, f"New message from {user_id}", link=f"/dashboard")
+
     return jsonify({
         'success': True,
         'message': {
@@ -1342,6 +1340,7 @@ def chat_my_files():
     })
 
 
+
 def cleanup_expired_files():
     """Remove expired files from storage and database."""
     import sqlite3
@@ -1366,6 +1365,41 @@ def cleanup_expired_files():
     conn.close()
     return len(expired)
 
+@app.route('/api/notifications')
+@login_required
+def get_notifications():
+    user_id = session.get("user_id")
+    db = get_db()
+
+    rows = db.execute(
+        "SELECT * FROM notifications WHERE user_id = ? ORDER BY timestamp DESC LIMIT 20",
+        (user_id,)
+    ).fetchall()
+
+    return jsonify({
+        "notifications": [
+            {
+                "id": r["id"],
+                "message": r["message"],
+                "link": r["link"],
+                "is_read": r["is_read"],
+                "timestamp": r["timestamp"]
+            }
+            for r in rows
+        ]
+    })
+
+
+@app.route('/api/notifications/mark-read', methods=['POST'])
+@login_required
+def mark_notifications_read():
+    user_id = session.get("user_id")
+    db = get_db()
+    db.execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", (user_id,))
+    db.commit()
+    return jsonify({"success": True})
+
+
 
 if __name__ == '__main__':
     # Clean up expired files on startup
@@ -1373,4 +1407,4 @@ if __name__ == '__main__':
         removed = cleanup_expired_files()
         if removed:
             print(f"Cleaned up {removed} expired file(s)")
-    app.run(port=5050, debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true')
+    app.run(debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true')

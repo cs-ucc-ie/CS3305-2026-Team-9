@@ -1,10 +1,10 @@
 import sqlite3
 import os
 from flask import g
-from app_paths import get_user_data_dir
 
-# Use user data directory so it works with PythonAnywhere and PyInstaller
-DATABASE = os.path.join(get_user_data_dir(), 'sharelink.db')
+# Use absolute path so it works on PythonAnywhere
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE = os.path.join(BASE_DIR, 'sharelink.db')
 
 def get_db():
     """Get database connection, reusing per-request if available"""
@@ -119,6 +119,18 @@ def init_db():
         cursor.execute('ALTER TABLE files ADD COLUMN checksum TEXT')
     except Exception:
         pass  # Column already exists
+    
+    cursor.execute('''
+CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    message TEXT NOT NULL,
+    link TEXT,
+    is_read INTEGER DEFAULT 0,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+''')
+
 
     conn.commit()
     conn.close()

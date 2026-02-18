@@ -2227,3 +2227,69 @@ form * {
     font-size: 20px;
   }
 }
+
+/* ===== Notifications ===== */
+.notif-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.notif-bell {
+    position: relative;
+    cursor: pointer;
+    font-size: 22px;
+    user-select: none;
+}
+
+.notif-count {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--danger);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.notif-dropdown {
+    position: absolute;
+    right: 20px;
+    top: 120px;
+    width: 260px;
+    max-height: 300px;
+    overflow-y: auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
+    z-index: 999;
+    padding: 0;
+}
+
+.notif-item {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.notif-item:last-child {
+    border-bottom: none;
+}
+
+.notif-item a {
+    color: var(--link-color);
+    font-weight: 600;
+}
+
+.notif-item-time {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+}
+
+.hidden {
+    display: none !important;
+}
