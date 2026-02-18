@@ -31,6 +31,10 @@ node_modules/
 # Electron build files
 dist/
 out/
+release*/
+build/
+*.spec
+.icon-icns/
 
 # Package locks (optional, but helps)
 package-lock.json

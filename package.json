@@ -5,7 +5,55 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build:flask:mac": "pyinstaller --name sharelink-server --add-data templates:templates --add-data static:static --hidden-import=boto3 --hidden-import=botocore --hidden-import=flask_wtf --hidden-import=wtforms --hidden-import=wtforms.validators --hidden-import=email_validator app.py",
+    "build:flask:win": "pyinstaller --name sharelink-server --add-data templates;templates --add-data static;static --hidden-import=boto3 --hidden-import=botocore --hidden-import=flask_wtf --hidden-import=wtforms --hidden-import=wtforms.validators --hidden-import=email_validator app.py",
+    "build:electron:mac": "electron-builder --mac",
+    "build:electron:win": "electron-builder --win",
+    "build:mac": "npm run build:flask:mac && npm run build:electron:mac",
+    "build:win": "npm run build:flask:win && npm run build:electron:win"
+  },
+  "build": {
+    "appId": "com.sharelink.app",
+    "productName": "ShareLink",
+    "directories": {
+      "output": "release"
+    },
+    "asar": false,
+    "files": [
+      "main.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist/sharelink-server",
+        "to": "sharelink-server",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": ".env.example",
+        "to": ".env.example"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "dir"
+      ],
+      "icon": "static/icon-512.png",
+      "identity": null
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "static/icon-512.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    }
   },
   "repository": {
     "type": "git",
@@ -19,10 +67,9 @@
     "url": "https://github.com/cs-ucc-ie/CS3305-2026-Team-9/issues"
   },
   "homepage": "https://github.com/cs-ucc-ie/CS3305-2026-Team-9#readme",
-  "dependencies": {
-    "electron": "^40.0.0"
-  },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
+    "electron": "^40.0.0",
     "electron-builder": "^26.7.0"
   }
 }

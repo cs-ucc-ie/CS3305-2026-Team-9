@@ -6,6 +6,7 @@ from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, send_file, session, g, jsonify
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+from app_paths import get_user_data_dir
 from database import get_db, close_db, init_db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_wtf.csrf import CSRFProtect
@@ -23,13 +24,12 @@ login_attempts = defaultdict(list)  # IP -> list of timestamps
 MAX_LOGIN_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 300  # 5 minutes
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from user data directory
+USER_DATA = get_user_data_dir()
+load_dotenv(os.path.join(USER_DATA, '.env'))
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY')
-if not app.secret_key:
-    raise RuntimeError("SECRET_KEY environment variable is not set")
+app.secret_key = os.getenv('SECRET_KEY') or secrets.token_hex(32)
 app.config['WTF_CSRF_ENABLED'] = True
 csrf = CSRFProtect(app)
 
@@ -173,7 +173,7 @@ def upload_profile_picture():
         return redirect(url_for("settings"))
 
     filename = secure_filename(g.user + "_" + file.filename)
-    profiles_dir = os.path.join(app.root_path, "static", "profiles")
+    profiles_dir = os.path.join(USER_DATA, "static", "profiles")
     os.makedirs(profiles_dir, exist_ok=True)
 
     # Delete old profile picture if it exists
@@ -197,9 +197,8 @@ def upload_profile_picture():
 
 
 
-# Configuration — use absolute paths for PythonAnywhere compatibility
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+# Configuration — use absolute paths for PythonAnywhere / PyInstaller compatibility
+UPLOAD_FOLDER = os.path.join(USER_DATA, 'uploads')
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'doc', 'docx', 'mp3', 'mp4', 'wav', 'mov', 'avi', 'csv', 'xlsx', 'pptx'}
 
@@ -1285,4 +1284,4 @@ if __name__ == '__main__':
         removed = cleanup_expired_files()
         if removed:
             print(f"Cleaned up {removed} expired file(s)")
-    app.run(debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true')
+    app.run(port=5050, debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true')
