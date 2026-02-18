@@ -15,8 +15,8 @@
             // Apply saved theme immediately to prevent flash of wrong theme
             (function() {
                 var saved = localStorage.getItem('sharelink-theme');
-                if (saved === 'light') {
-                    document.documentElement.setAttribute('data-theme', 'light');
+                if (saved && saved !== 'dark') {
+                    document.documentElement.setAttribute('data-theme', saved);
                 }
             })();
         </script>
@@ -25,9 +25,12 @@
         <header>
             <a href="{{ url_for('index') }}" class="header-brand">ShareLink</a>
             <nav class="header-nav">
-                <button type="button" class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
-                    <span class="theme-icon" id="themeIcon">🌙</span>
-                </button>
+                <select id="themeSelect" class="theme-select" onchange="changeTheme()" title="Select theme">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="cherry-blossom">Cherry Blossom</option>
+                    <option value="solarized">Solarized</option>
+                </select>
 {% if g.user %}
                 <div class="header-user">
                     {% if g.profile_picture %}
@@ -128,32 +131,31 @@
         </script>
 
         <script>
-            // Theme toggle
-            function toggleTheme() {
+            // Theme selection helpers
+            function changeTheme() {
+                var select = document.getElementById('themeSelect');
+                var theme = select ? select.value : 'dark';
                 var html = document.documentElement;
-                var current = html.getAttribute('data-theme') || 'dark';
-                var next = current === 'light' ? 'dark' : 'light';
-
-                if (next === 'dark') {
+                if (theme === 'dark') {
                     html.removeAttribute('data-theme');
                 } else {
-                    html.setAttribute('data-theme', 'light');
+                    html.setAttribute('data-theme', theme);
                 }
-                localStorage.setItem('sharelink-theme', next);
-                updateThemeIcon(next);
+                localStorage.setItem('sharelink-theme', theme);
+                updateThemeOption(theme);
             }
 
-            function updateThemeIcon(theme) {
-                var icon = document.getElementById('themeIcon');
-                if (icon) {
-                    icon.textContent = theme === 'light' ? '☀️' : '🌙';
+            function updateThemeOption(theme) {
+                var select = document.getElementById('themeSelect');
+                if (select) {
+                    select.value = theme;
                 }
             }
 
-            // Set icon on page load
+            // Set select value on page load
             (function() {
                 var saved = localStorage.getItem('sharelink-theme') || 'dark';
-                updateThemeIcon(saved);
+                updateThemeOption(saved);
             })();
         </script>
     </body>

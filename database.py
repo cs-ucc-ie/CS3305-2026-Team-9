@@ -58,6 +58,7 @@ def init_db():
         upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         download_count INTEGER DEFAULT 0,
         expiry_date TIMESTAMP NOT NULL,
+        checksum TEXT NOT NULL,
         salt TEXT,
         password_hash TEXT,
         is_encrypted BOOLEAN DEFAULT 0
@@ -99,6 +100,8 @@ def init_db():
     )
     ''')
 
+    
+
     # Migration: add is_encrypted column to existing databases
     try:
         cursor.execute('ALTER TABLE files ADD COLUMN is_encrypted BOOLEAN DEFAULT 0')
@@ -108,6 +111,12 @@ def init_db():
     # Migration: add encryption_key column to existing databases
     try:
         cursor.execute('ALTER TABLE files ADD COLUMN encryption_key TEXT')
+    except Exception:
+        pass  # Column already exists
+
+    # Migration: add checksum column to existing databases
+    try:
+        cursor.execute('ALTER TABLE files ADD COLUMN checksum TEXT')
     except Exception:
         pass  # Column already exists
 

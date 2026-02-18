@@ -84,6 +84,95 @@
   --body-gradient: radial-gradient(1200px 800px at 20% 0%, #dbeafe 0%, var(--bg) 55%);
 }
 
+/* == Solarized Theme ==*/
+[data-theme="solarized"] {
+  /* base colours */
+  --bg: #002b36;            /* base03 */
+  --card: #073642;          /* base02 */
+  --card-2: #586e75;        /* base01 */
+  --text: #839496;          /* base0 */
+  --muted: #93a1a1;         /* base1 */
+  --border: rgba(131, 148, 150, 0.1); /* base0 at 10% */
+
+  /* accents */
+  --primary: #268bd2;        /* blue */
+  --primary-hover: #2aa198;  /* cyan */
+
+  --success: #859900;        /* green */
+  --danger: #dc322f;         /* red */
+  --warning-bg: rgba(181, 137, 0, 0.10); /* yellow */
+  --warning-border: rgba(181, 137, 0, 0.3);
+  --warning-text: #b58900;   /* yellow */
+
+  /* shadows & overlays */
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+
+  --overlay-light: rgba(131, 148, 150, 0.08);
+  --overlay-light-2: rgba(131, 148, 150, 0.04);
+  --overlay-light-4: rgba(131, 148, 150, 0.08);
+  --overlay-light-8: rgba(131, 148, 150, 0.12);
+  --overlay-light-10: rgba(131, 148, 150, 0.14);
+  --overlay-light-14: rgba(131, 148, 150, 0.18);
+  --overlay-light-18: rgba(131, 148, 150, 0.22);
+  --overlay-dark-25: rgba(0, 0, 0, 0.06);
+  --overlay-dark-15: rgba(0, 0, 0, 0.04);
+
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --link-color: #268bd2;
+  --link-hover: #b58900;
+
+  --hero-badge-bg: rgba(38, 139, 210, 0.08);
+  --hero-badge-border: rgba(38, 139, 210, 0.2);
+  --hero-badge-text: #268bd2;
+
+  --error-text: #dc322f;
+  --body-gradient: var(--bg);
+}
+
+/* == Cherry Blossom Theme == */
+[data-theme="cherry-blossom"] {
+  /* base colors */
+  --bg: #ffeaf0;            /* soft pink base */
+  --card: #ffd0e0;          /* brighter pink cards */
+  --card-2: #ffb0d0;        /* stronger pink for secondary cards */
+  --text: #4a1e2d;          /* slightly richer dark for contrast */
+  --muted: #b0869c;         /* a tad more saturated */
+  --border: rgba(74, 30, 45, 0.1);
+
+  /* accents */
+  --primary: #e91e63;       /* hot pink */
+  --primary-hover: #d81b60; /* deeper pink on hover */
+
+  --success: #28a745;
+  --danger: #dc3545;
+  --warning-bg: rgba(255, 193, 7, 0.10);
+  --warning-border: rgba(255, 193, 7, 0.3);
+  --warning-text: #ffc107;
+
+  /* shadows and overlays */
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+
+  --overlay-light: rgba(230, 30, 100, 0.06);   /* subtle pink overlay */
+  --overlay-light-2: rgba(230, 30, 100, 0.03);
+  --overlay-light-4: rgba(230, 30, 100, 0.06);
+  --overlay-light-8: rgba(230, 30, 100, 0.10);
+  --overlay-light-10: rgba(230, 30, 100, 0.12);
+  --overlay-light-14: rgba(230, 30, 100, 0.16);
+  --overlay-light-18: rgba(230, 30, 100, 0.20);
+  --overlay-dark-25: rgba(0, 0, 0, 0.04);
+  --overlay-dark-15: rgba(0, 0, 0, 0.02);
+
+  --input-bg: rgba(255, 255, 255, 0.8);
+  --link-color: #d6336c;
+  --link-hover: #c0266a;
+
+  --hero-badge-bg: rgba(214, 51, 108, 0.08);
+  --hero-badge-border: rgba(214, 51, 108, 0.2);
+  --hero-badge-text: #d6336c;
+
+  --error-text: #dc3545;
+  --body-gradient: radial-gradient(1200px 800px at 20% 0%, #fff5f8 0%, var(--bg) 55%);
+}
 html {
   scroll-behavior: smooth;
 }
@@ -211,7 +300,7 @@ header a:focus-visible {
   }
 }
 
-/* ===== Theme toggle button ===== */
+/* ===== Theme toggle button (legacy kept for reference) ===== */
 .theme-toggle {
   width: 36px;
   height: 36px;
@@ -226,6 +315,26 @@ header a:focus-visible {
   margin: 0;
   transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
   flex-shrink: 0;
+}
+
+/* ===== Theme dropdown select ===== */
+.theme-select {
+  appearance: none;
+  background: var(--overlay-light-4);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.theme-select:hover {
+  background: var(--overlay-light-8);
+  border-color: var(--overlay-light-18);
+}
+.theme-select:focus {
+  outline: none;
+  border-color: var(--text);
 }
 
 .theme-toggle:hover {

@@ -18,6 +18,7 @@ import io
 import base64
 import zipfile
 from storage import save_file, save_zip, get_file_response, delete_file as storage_delete_file
+import hashlib
 
 # Simple in-memory rate limiter for login attempts
 login_attempts = defaultdict(list)  # IP -> list of timestamps
@@ -259,6 +260,18 @@ def generate_qr_code(url):
     
     return f"data:image/png;base64,{img_str}"
 
+def compute_checksum(file_obj, chunk_size=8192):
+    """Return SHA256 hex digest for a file-like object."""
+    h = hashlib.sha256()
+    file_obj.seek(0)
+    while True:
+        chunk = file_obj.read(chunk_size)
+        if not chunk:
+            break
+        h.update(chunk)
+    file_obj.seek(0)
+    return h.hexdigest()
+
 # Homepage route
 @app.route('/')
 def index():
@@ -357,6 +370,9 @@ def upload():
             
             original_filename = secure_filename(file.filename)
             saved_filename = f"{token}_{original_filename}"
+
+            # compute checksum before saving (function resets file pointer)
+            checksum = compute_checksum(file)
             file_size = save_file(file, saved_filename, app.config['UPLOAD_FOLDER'])
         
         # If multiple files, create a zip
@@ -377,6 +393,9 @@ def upload():
                     zip_entries.append((filename, file_data))
 
             file_size = save_zip(zip_entries, saved_filename, app.config['UPLOAD_FOLDER'])
+            # compute checksum on the resulting zip file
+            with open(os.path.join(app.config['UPLOAD_FOLDER'], saved_filename), 'rb') as fobj:
+                checksum = compute_checksum(fobj)
             flash(f'Created zip file with {len(files)} files', 'success')
         
         # Check if file was encrypted client-side
@@ -386,8 +405,8 @@ def upload():
         # Save to database
         db = get_db()
         db.execute(
-            'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, salt, password_hash, is_encrypted, encryption_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            (saved_filename, original_filename, file_size, token, user_id, expiry_date, salt, password_hash, is_encrypted, encryption_key)
+            'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, checksum, salt, password_hash, is_encrypted, encryption_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            (saved_filename, original_filename, file_size, token, user_id, expiry_date, checksum, salt, password_hash, is_encrypted, encryption_key)
         )
         db.commit()
 
@@ -404,7 +423,6 @@ def upload_success(token):
     if file_info is None:
         flash('File not found', 'error')
         return redirect(url_for('index'))
-
     # Generate QR code for the download link
     download_url = request.url_root + 'download/' + token
     qr_code = generate_qr_code(download_url)
@@ -420,14 +438,14 @@ def download(token):
     if file_info is None:
         flash('File not found or link expired', 'error')
 
-        return redirect(url_for('index'))
+        return redirect(url_for('dashboard'))
     
     # Check if link has expired
     expiry_date = datetime.fromisoformat(file_info['expiry_date'])
     if datetime.now() > expiry_date:
         flash('This link has expired', 'error')
 
-        return redirect(url_for('index'))
+        return redirect(url_for('dashboard'))
     
     # Check if password protected
     if file_info['password_hash']:
@@ -445,8 +463,20 @@ def download(token):
         
                 return render_template('password_check.html', token=token)
             # Password correct, continue to download
-
-    # Increment download count
+    
+    # Verify file integrity before allowing download
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file_info['filename'])
+    try:
+        with open(filepath, 'rb') as f:
+            file_checksum = compute_checksum(f)
+        if file_checksum != file_info['checksum']:
+            flash('File integrity check failed. The file may be corrupted.', 'error')
+            return redirect(url_for('dashboard'))
+    except Exception:
+        flash('Error verifying file integrity.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Increment download countf
     db.execute('UPDATE files SET download_count = download_count + 1 WHERE share_token = ?', (token,))
     db.commit()
 
@@ -838,8 +868,9 @@ def download_all():
     user_id = session.get('user_id')
     db = get_db()
 
+    # fetch checksum as well so we can verify integrity before zipping
     files = db.execute(
-        """SELECT filename, original_filename FROM files
+        """SELECT filename, original_filename, checksum FROM files
            WHERE user_id = ? AND expiry_date > ? AND is_encrypted = 0""",
         (user_id, datetime.now().isoformat())
     ).fetchall()
@@ -851,6 +882,32 @@ def download_all():
     zip_buffer = io.BytesIO()
     upload_folder = app.config['UPLOAD_FOLDER']
     use_cloud = os.getenv('USE_CLOUD_STORAGE', 'false').lower() == 'true'
+
+    # Verify file integrity before adding to zip
+    corrupted_files = []
+    valid_files = []
+    
+    for f in files:
+        filepath = os.path.join(upload_folder, f['filename'])
+        try:
+            with open(filepath, 'rb') as file_obj:
+                file_checksum = compute_checksum(file_obj)
+            if file_checksum != f['checksum']:
+                corrupted_files.append(f['original_filename'])
+            else:
+                valid_files.append(f)
+        except Exception:
+            corrupted_files.append(f['original_filename'])
+    
+    if corrupted_files:
+        flash(f'Cannot download. Corrupted files: {", ".join(corrupted_files)}', 'error')
+        return redirect(url_for('dashboard'))
+    
+    files = valid_files
+    
+    if not files:
+        flash('No valid files to download', 'error')
+        return redirect(url_for('dashboard'))
 
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for f in files:
@@ -971,6 +1028,17 @@ def preview(token):
         flash('This link has expired', 'error')
 
         return redirect(url_for('index'))
+    
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file_info['filename'])
+    try:
+        with open(filepath, 'rb') as f:
+            file_checksum = compute_checksum(f)
+        if file_checksum != file_info['checksum']:
+            flash('The file may be corrupted, and cannot be previewed.', 'error')
+            return redirect(url_for('dashboard'))
+    except Exception:
+        flash('Error verifying file integrity.', 'error')
+        return redirect(url_for('dashboard'))
     
     # Check if password protected
     if file_info['password_hash']:
