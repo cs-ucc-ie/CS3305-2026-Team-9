@@ -216,6 +216,18 @@
   --error-text: #ff5555;
   --body-gradient: radial-gradient(1200px 800px at 20% 0%, #3a3d4f 0%, var(--bg) 58%);
 }
+
+:root,
+[data-theme="solarized"],
+[data-theme="dracula"] {
+  color-scheme: dark;
+}
+
+[data-theme="light"],
+[data-theme="cherry-blossom"] {
+  color-scheme: light;
+}
+
 html {
   scroll-behavior: smooth;
   min-height: 100%;
@@ -388,6 +400,7 @@ header a:focus-visible {
 .theme-select {
   appearance: none;
   background: var(--overlay-light-4);
+  background-color: var(--overlay-light-4);
   color: var(--text);
   border: 1px solid var(--border);
   padding: 6px 12px;
@@ -938,8 +951,20 @@ select {
   border-radius: var(--radius-xs);
   border: 1px solid var(--border);
   background: var(--input-bg);
+  background-color: var(--input-bg);
   color: var(--text);
   outline: none;
+  color-scheme: inherit;
+}
+
+select option,
+select optgroup,
+.theme-select option,
+.sort-select option,
+.menu-select option {
+  background: var(--card);
+  background-color: var(--card);
+  color: var(--text);
 }
 
 select:focus {
@@ -1702,6 +1727,7 @@ form * {
   border-radius: var(--radius-xs);
   border: 1px solid var(--border);
   background: var(--input-bg);
+  background-color: var(--input-bg);
   color: var(--text);
   cursor: pointer;
   box-sizing: border-box;
@@ -2159,6 +2185,7 @@ form * {
   width: 100%;
   padding: 8px 10px;
   background: var(--input-bg);
+  background-color: var(--input-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-xs);
   color: var(--text);
