@@ -2446,6 +2446,10 @@ form * {
   border-bottom: none;
 }
 
+.unfriend-form {
+  margin-right: 0px;
+}
+
 /* ===== Dashboard shared files ===== */
 .shared-list li {
   margin-bottom: 10px;

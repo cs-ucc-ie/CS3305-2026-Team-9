@@ -85,7 +85,7 @@
                 {% set friend = f.friend_id if f.user_id == g.user else f.user_id %}
                 <li>
                     {{ friend }}
-                    <form method="POST" action="{{ url_for('unfriend', friend_id=friend) }}" class="form-inline">
+                    <form method="POST" action="{{ url_for('unfriend', friend_id=friend) }}" class="form-inline unfriend-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-danger btn-sm">Unfriend</button>
                     </form>
