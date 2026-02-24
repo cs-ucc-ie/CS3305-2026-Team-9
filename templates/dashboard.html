@@ -149,22 +149,25 @@
 
     {% if files %}
     <div class="file-controls-bar">
-        <form method="GET" action="{{ url_for('dashboard') }}" class="form-inline mb-2">
+        <form method="GET" action="{{ url_for('dashboard') }}" class="form-inline mb-2 file-search-form">
             <div class="search-bar">
                 <input type="text" name="q" placeholder="Search files..." value="{{ request.args.get('q', '') }}" class="search-input">
                 {% if request.args.get('q') %}
                     <a href="{{ url_for('dashboard', sort=request.args.get('sort', 'newest')) }}" class="search-clear" title="Clear search">&times;</a>
                 {% endif %}
             </div>
+            <input type="hidden" name="sort" value="{{ request.args.get('sort', 'newest') }}">
+            <button type="submit" class="btn btn-sm">Search</button>
+        </form>
 
-            <select name="sort" onchange="this.form.submit()" class="sort-select">
+        <form method="GET" action="{{ url_for('dashboard') }}" class="form-inline mb-2 file-sort-form">
+            <input type="hidden" name="q" value="{{ request.args.get('q', '') }}">
+            <select name="sort" onchange="this.form.submit()" class="sort-select" aria-label="Sort files">
                 <option value="newest" {% if request.args.get('sort') == 'newest' %}selected{% endif %}>Newest</option>
                 <option value="oldest" {% if request.args.get('sort') == 'oldest' %}selected{% endif %}>Oldest</option>
                 <option value="largest" {% if request.args.get('sort') == 'largest' %}selected{% endif %}>Largest</option>
                 <option value="popular" {% if request.args.get('sort') == 'popular' %}selected{% endif %}>Most Downloaded</option>
             </select>
-
-            <button type="submit" class="btn btn-sm">Search</button>
         </form>
     </div>
     {% endif %}
