@@ -1731,6 +1731,17 @@ form * {
   height: 1px;
 }
 
+.file-table tbody td:last-child {
+  text-align: center;
+}
+
+.file-table tbody td:last-child .hamburger-menu {
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .dashboard-layout.files-main .file-table th:nth-child(2),
 .dashboard-layout.files-main .file-table th:nth-child(3),
 .dashboard-layout.files-main .file-table th:nth-child(4),
@@ -1815,9 +1826,120 @@ form * {
   color: var(--success);
 }
 
-.status-encrypted {
-  color: var(--warning-text);
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  position: relative;
+  cursor: help;
+  box-shadow: 0 0 0 2px var(--overlay-dark-15);
+}
+
+.status-indicator-expired {
+  background: var(--danger);
+}
+
+.status-indicator-active {
+  background: var(--success);
+}
+
+.status-indicator::after {
+  content: attr(data-status);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 4px 8px;
   font-size: 12px;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 25;
+}
+
+.status-indicator:hover::after,
+.status-indicator:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.status-indicator:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.status-inline-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-separator {
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.encryption-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: help;
+}
+
+.encryption-indicator-locked::before {
+  content: "🔒";
+}
+
+.encryption-indicator-unlocked::before {
+  content: "🔓";
+}
+
+.encryption-indicator::after {
+  content: attr(data-encryption);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 4px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 25;
+}
+
+.encryption-indicator:hover::after,
+.encryption-indicator:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.encryption-indicator:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* ===== Hamburger Menu ===== */
@@ -1835,6 +1957,7 @@ form * {
   border: 1px solid var(--border);
   border-radius: var(--radius-xs);
   padding: 8px 12px;
+  margin-top: 0;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
@@ -2017,6 +2140,12 @@ form * {
   margin-bottom: 12px;
 }
 
+.files-title-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .files-card-header h2 {
   margin: 0;
 }
@@ -2070,6 +2199,11 @@ form * {
   .files-card-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .files-title-inline {
+    width: 100%;
+    flex-wrap: wrap;
   }
   
   .view-toggle-container {
@@ -2176,7 +2310,15 @@ form * {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
   margin-top: 4px;
+}
+
+.file-card-status .status-encrypted {
+  margin-left: auto;
+  color: var(--warning-text);
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 /* ===== Dashboard lists ===== */

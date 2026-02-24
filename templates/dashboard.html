@@ -25,9 +25,6 @@
     </div>
     <div class="dashboard-actions">
         <a href="{{ url_for('upload') }}" class="btn btn-sm">Upload New File</a>
-        {% if files %}
-        <a href="{{ url_for('download_all') }}" class="btn btn-secondary btn-sm" onclick="showToast('Preparing ZIP download...', 'info')">📦 Download All</a>
-        {% endif %}
         <a href="{{ url_for('settings') }}" class="btn btn-secondary btn-sm">Settings</a>
     </div>
 </div>
@@ -120,7 +117,12 @@
 
 <div class="card files-main-card">
     <div class="files-card-header">
-        <h2>My Uploaded Files ({{ files|length }})</h2>
+        <div class="files-title-inline">
+            <h2>My Uploaded Files ({{ files|length }})</h2>
+            {% if files %}
+            <a href="{{ url_for('download_all') }}" class="btn btn-secondary btn-sm" onclick="showToast('Preparing ZIP download...', 'info')">Download All</a>
+            {% endif %}
+        </div>
         {% if files %}
         <div class="view-toggle-container files-header-toggle">
             <button id="listViewBtn" class="view-toggle-btn active" onclick="switchView('list')" title="List view">
@@ -211,14 +213,18 @@
                         </span>
                     </td>
                     <td>
-                        {% if file.expiry_date < now %}
-                            <span class="status-expired">Expired</span>
-                        {% else %}
-                            <span class="status-active">Active</span>
-                        {% endif %}
-                        {% if file.is_encrypted %}
-                            <br><span class="status-encrypted">E2E Encrypted</span>
-                        {% endif %}
+                        <span class="status-inline-group">
+                            {% if file.expiry_date < now %}
+                                <span class="status-indicator status-indicator-expired" data-status="Expired" tabindex="0" aria-label="Expired"></span>
+                            {% else %}
+                                <span class="status-indicator status-indicator-active" data-status="Active" tabindex="0" aria-label="Active"></span>
+                            {% endif %}
+                            <strong class="status-separator" aria-hidden="true">|</strong>
+                            <span class="encryption-indicator {% if file.is_encrypted %}encryption-indicator-locked{% else %}encryption-indicator-unlocked{% endif %}"
+                                  data-encryption="{% if file.is_encrypted %}E2E Encrypted{% else %}Not Encrypted{% endif %}"
+                                  tabindex="0"
+                                  aria-label="{% if file.is_encrypted %}E2E Encrypted{% else %}Not Encrypted{% endif %}"></span>
+                        </span>
                     </td>
                     <td>
                         <div class="hamburger-menu">
