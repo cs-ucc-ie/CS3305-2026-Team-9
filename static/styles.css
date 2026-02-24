@@ -2310,7 +2310,7 @@ form * {
 /* ===== Grid View ===== */
 .file-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
   margin-top: 20px;
 }
@@ -2577,7 +2577,7 @@ form * {
 /* ===== Responsive tweaks ===== */
 @media (max-width: 1024px) {
   .file-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -2624,7 +2624,7 @@ form * {
 
   /* Grid view responsive */
   .file-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .dashboard-layout.files-main .file-grid {
