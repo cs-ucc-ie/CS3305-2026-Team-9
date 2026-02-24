@@ -265,19 +265,40 @@ header {
 }
 
 .header-username {
-  color: var(--muted);
+  color: var(--text);
   font-size: 14px;
   font-weight: 500;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--overlay-light-4);
+  border-radius: var(--radius-xs);
+  height: 38px;
+  line-height: 1.5;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+.header-username:hover {
+  background: var(--overlay-light-8);
+  border-color: var(--overlay-light-18);
+  transform: translateY(-1px);
 }
 
 header a {
   color: var(--text);
   text-decoration: none;
-  padding: 8px 14px;
+  padding: 6px 12px;
   border: 1px solid var(--border);
   background: var(--overlay-light-4);
-  border-radius: 999px;
+  border-radius: var(--radius-xs);
   font-size: 14px;
+  height: 38px;
+  line-height: 1.5;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
   transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
 
@@ -290,6 +311,7 @@ header a:hover {
 header a:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
 @media (max-width: 768px) {
@@ -326,14 +348,19 @@ header a:focus-visible {
   background: var(--overlay-light-4);
   color: var(--text);
   border: 1px solid var(--border);
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
   font-size: 14px;
+  height: 38px;
+  line-height: 1.5;
+  box-sizing: border-box;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
 .theme-select:hover {
   background: var(--overlay-light-8);
   border-color: var(--overlay-light-18);
+  transform: translateY(-1px);
 }
 .theme-select:focus {
   outline: none;
@@ -389,7 +416,7 @@ a:hover {
 a:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 /* ===== Dashboard header ===== */
@@ -602,7 +629,7 @@ form {
   max-height: 150px;
   overflow-y: auto;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--input-bg);
   margin: 4px 0 8px;
   padding: 4px 0;
@@ -654,7 +681,7 @@ input[type="text"],
 input[type="password"] {
   width: 100%;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-xs);
   border: 1px solid var(--overlay-light-14);
   background: var(--input-bg);
   color: var(--text);
@@ -679,7 +706,7 @@ button {
   margin-top: 16px;
   appearance: none;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-xs);
   padding: 12px 16px;
   font-weight: 700;
   font-size: 16px;
@@ -828,6 +855,12 @@ form * {
   font-size: 14px;
   border-radius: var(--radius-xs);
   margin-top: 0;
+  height: 38px;
+  line-height: 1.5;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-inline {
@@ -957,7 +990,7 @@ form * {
 .btn-lg {
   padding: 14px 32px;
   font-size: 16px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
 }
 
 /* Feature cards grid */
@@ -1225,7 +1258,7 @@ form * {
 
 .drop-zone {
   border: 3px dashed var(--primary);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 40px;
   margin: 20px 0;
   background: var(--card-2);
@@ -1288,7 +1321,7 @@ form * {
 .progress-card {
   background: var(--card);
   padding: 30px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
 }
 
@@ -1299,7 +1332,7 @@ form * {
 
 .progress-track {
   background: var(--overlay-light-10);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   margin: 20px 0;
   height: 30px;
@@ -1380,7 +1413,7 @@ form * {
   text-align: center;
   padding: 20px;
   background: white;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   margin: 20px 0;
   border: 1px solid var(--border);
   display: inline-block;
@@ -1570,7 +1603,7 @@ form * {
 .download-badge {
   background: var(--card-2);
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-xs);
 }
 
 .status-expired {
@@ -1617,7 +1650,7 @@ form * {
   width: 20px;
   height: 2px;
   background: var(--text);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   transition: all 0.2s ease;
 }
 
@@ -1662,7 +1695,7 @@ form * {
 
 .menu-dropdown::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
 }
 
 .menu-dropdown::-webkit-scrollbar-thumb:hover {
@@ -1687,9 +1720,9 @@ form * {
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
   width: 100%;
-  padding: 10px 16px;
+  padding: 6px 12px;
+  margin: 0;
   background: transparent;
   border: none;
   color: var(--text);
@@ -1697,7 +1730,9 @@ form * {
   cursor: pointer;
   transition: background 0.15s ease;
   font-size: 14px;
+  font-weight: bold;
   text-decoration: none;
+  line-height: 1.5;
 }
 
 .menu-item:hover {
@@ -2783,9 +2818,7 @@ form * {
 
 /* ===== Notifications ===== */
 .notif-wrapper {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 10px;
+    display: inline-flex;
     position: relative;
 }
 
@@ -2810,8 +2843,8 @@ form * {
 
 .notif-dropdown {
     position: absolute;
-    right: 20px;
-    top: 120px;
+    top: calc(100% - 50px);
+    left: 60px;
     width: 260px;
     max-height: 300px;
     overflow-y: auto;

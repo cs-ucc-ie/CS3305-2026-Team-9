@@ -4,17 +4,6 @@
 
 {% block main_content %}
 
-<div class="notif-wrapper">
-    <div id="notif-bell" class="notif-bell">
-        🔔
-        <span id="notif-count" class="notif-count hidden"></span>
-    </div>
-</div>
-
-<div id="notif-dropdown" class="notif-dropdown hidden"></div>
-
-
-
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
         {% for category, message in messages %}
@@ -24,7 +13,16 @@
 {% endwith %}
 
 <div class="dashboard-header">
-    <h1>My Dashboard</h1>
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <h1>My Dashboard</h1>
+        <div class="notif-wrapper">
+            <div id="notif-bell" class="notif-bell">
+                🔔
+                <span id="notif-count" class="notif-count hidden"></span>
+            </div>
+            <div id="notif-dropdown" class="notif-dropdown hidden"></div>
+        </div>
+    </div>
     <div class="dashboard-actions">
         <a href="{{ url_for('upload') }}" class="btn btn-sm">Upload New File</a>
         {% if files %}
@@ -205,27 +203,17 @@
                                 <span></span>
                             </button>
                             <div class="menu-dropdown" id="table-{{ file.share_token }}">
-                                <a href="{{ url_for('preview', token=file.share_token) }}" class="menu-item">
-                                    <span class="menu-icon">👁️</span> Preview
-                                </a>
-                                <a href="{{ url_for('download', token=file.share_token) }}" class="menu-item">
-                                    <span class="menu-icon">⬇️</span> Download
-                                </a>
-                                <button onclick="copyShareLink('{{ request.url_root }}download/{{ file.share_token }}'); closeAllMenus();" class="menu-item">
-                                    <span class="menu-icon">📋</span> Copy Link
-                                </button>
-                                <button onclick="openRename('{{ file.share_token }}', '{{ file.original_filename }}'); closeAllMenus();" class="menu-item">
-                                    <span class="menu-icon">✏️</span> Rename
-                                </button>
-                                <button onclick="deleteFile('{{ file.share_token }}'); closeAllMenus();" class="menu-item menu-item-danger">
-                                    <span class="menu-icon">🗑️</span> Delete
-                                </button>
+                                <a href="{{ url_for('preview', token=file.share_token) }}" class="menu-item">Preview</a>
+                                <a href="{{ url_for('download', token=file.share_token) }}" class="menu-item">Download</a>
+                                <button onclick="copyShareLink('{{ request.url_root }}download/{{ file.share_token }}'); closeAllMenus();" class="menu-item">Copy Link</button>
+                                <button onclick="openRename('{{ file.share_token }}', '{{ file.original_filename }}'); closeAllMenus();" class="menu-item">Rename</button>
+                                <button onclick="deleteFile('{{ file.share_token }}'); closeAllMenus();" class="menu-item menu-item-danger">Delete</button>
                                 {% if not file.is_encrypted and friends %}
                                 <div class="menu-divider"></div>
                                 <div class="menu-share-section">
                                     <form method="POST" action="{{ url_for('share_file', token=file['share_token']) }}" class="menu-share-form">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <label class="menu-label">📤 Share with:</label>
+                                        <label class="menu-label">Share with:</label>
                                         <select name="friend_id" class="menu-select">
                                             {% for friend in friends %}
                                                 {% set friend_name = friend['friend_id'] if friend['user_id'] == g.user else friend['user_id'] %}
@@ -258,27 +246,17 @@
                         <span></span>
                     </button>
                     <div class="menu-dropdown" id="grid-{{ file.share_token }}">
-                        <a href="{{ url_for('preview', token=file.share_token) }}" class="menu-item">
-                            <span class="menu-icon">👁️</span> Preview
-                        </a>
-                        <a href="{{ url_for('download', token=file.share_token) }}" class="menu-item">
-                            <span class="menu-icon">⬇️</span> Download
-                        </a>
-                        <button onclick="copyShareLink('{{ request.url_root }}download/{{ file.share_token }}'); closeAllMenus();" class="menu-item">
-                            <span class="menu-icon">📋</span> Copy Link
-                        </button>
-                        <button onclick="openRename('{{ file.share_token }}', '{{ file.original_filename }}'); closeAllMenus();" class="menu-item">
-                            <span class="menu-icon">✏️</span> Rename
-                        </button>
-                        <button onclick="deleteFile('{{ file.share_token }}'); closeAllMenus();" class="menu-item menu-item-danger">
-                            <span class="menu-icon">🗑️</span> Delete
-                        </button>
+                        <a href="{{ url_for('preview', token=file.share_token) }}" class="menu-item">Preview</a>
+                        <a href="{{ url_for('download', token=file.share_token) }}" class="menu-item">Download</a>
+                        <button onclick="copyShareLink('{{ request.url_root }}download/{{ file.share_token }}'); closeAllMenus();" class="menu-item">Copy Link</button>
+                        <button onclick="openRename('{{ file.share_token }}', '{{ file.original_filename }}'); closeAllMenus();" class="menu-item">Rename</button>
+                        <button onclick="deleteFile('{{ file.share_token }}'); closeAllMenus();" class="menu-item menu-item-danger">Delete</button>
                         {% if not file.is_encrypted and friends %}
                         <div class="menu-divider"></div>
                         <div class="menu-share-section">
                             <form method="POST" action="{{ url_for('share_file', token=file['share_token']) }}" class="menu-share-form">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <label class="menu-label">📤 Share with:</label>
+                                <label class="menu-label">Share with:</label>
                                 <select name="friend_id" class="menu-select">
                                     {% for friend in friends %}
                                         {% set friend_name = friend['friend_id'] if friend['user_id'] == g.user else friend['user_id'] %}
