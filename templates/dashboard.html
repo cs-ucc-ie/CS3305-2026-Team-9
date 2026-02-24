@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}My Dashboard - ShareLink{% endblock %}
+{% block title %}{{ g.user }}'s Dashboard - ShareLink{% endblock %}
 
 {% block main_content %}
 
@@ -14,7 +14,7 @@
 
 <div class="dashboard-header">
     <div style="display: flex; align-items: center; gap: 12px;">
-        <h1>My Dashboard</h1>
+        <h1>{{ g.user }}'s Dashboard</h1>
         <div class="notif-wrapper">
             <div id="notif-bell" class="notif-bell">
                 🔔
@@ -32,6 +32,18 @@
     </div>
 </div>
 
+<div class="dashboard-layout-toggle-row">
+    <div class="dashboard-layout-toggle" role="group" aria-label="Dashboard layout toggle">
+        <span class="layout-label">Default</span>
+        <label class="layout-switch" for="layoutModeSwitch">
+            <input type="checkbox" id="layoutModeSwitch" onchange="switchDashboardLayout(this.checked ? 'compact' : 'default')">
+            <span class="layout-slider" aria-hidden="true"></span>
+        </label>
+        <span class="layout-label">Compact</span>
+    </div>
+</div>
+
+<div id="dashboardLayout" class="dashboard-layout">
 <div class="friends-grid">
     <div class="card card-mb">
         <h2>Add a Friend</h2>
@@ -106,8 +118,32 @@
     </div>
 </div>
 
-<div class="card">
-    <h2>My Uploaded Files ({{ files|length }})</h2>
+<div class="card files-main-card">
+    <div class="files-card-header">
+        <h2>My Uploaded Files ({{ files|length }})</h2>
+        {% if files %}
+        <div class="view-toggle-container files-header-toggle">
+            <button id="listViewBtn" class="view-toggle-btn active" onclick="switchView('list')" title="List view">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+        </button>
+        <button id="gridViewBtn" class="view-toggle-btn" onclick="switchView('grid')" title="Grid view">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+        </button>
+        </div>
+        {% endif %}
+    </div>
 
     {% if files %}
     <div class="file-controls-bar">
@@ -128,27 +164,6 @@
 
             <button type="submit" class="btn btn-sm">Search</button>
         </form>
-
-        <div class="view-toggle-container">
-            <button id="listViewBtn" class="view-toggle-btn active" onclick="switchView('list')" title="List view">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-            </svg>
-        </button>
-        <button id="gridViewBtn" class="view-toggle-btn" onclick="switchView('grid')" title="Grid view">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
-            </svg>
-        </button>
-        </div>
     </div>
     {% endif %}
 
@@ -169,7 +184,17 @@
                 {% for file in files %}
                 <tr>
                     <td>
-                        <strong>{{ file.original_filename }}</strong>
+                        <div class="filename-cell">
+                            <strong>{{ file.original_filename }}</strong>
+                            <span class="file-meta-info" tabindex="0" aria-label="File details">
+                                <span class="info-trigger" aria-hidden="true">i</span>
+                                <span class="info-tooltip" role="tooltip">
+                                    <span><strong>Size:</strong> {{ "%.2f"|format(file.file_size / 1024 / 1024) }} MB</span>
+                                    <span><strong>Uploaded:</strong> {{ file.upload_date[:16] }}</span>
+                                    <span><strong>Expires:</strong> {{ file.expiry_date[:16] }}</span>
+                                </span>
+                            </span>
+                        </div>
                     </td>
                     <td>
                         {{ "%.2f"|format(file.file_size / 1024 / 1024) }} MB
@@ -309,7 +334,7 @@
     {% endif %}
 </div>
 
-<div class="card mt-3">
+<div class="card mt-3 shared-files-card">
     <h2>Files Shared With Me</h2>
 
     {% if shared_with_me %}
@@ -326,6 +351,7 @@
     {% else %}
         <p>No one has shared files with you.</p>
     {% endif %}
+</div>
 </div>
 
 <!-- Rename modal -->
@@ -460,11 +486,46 @@ function switchView(viewType) {
     }
 }
 
+function switchDashboardLayout(layoutType) {
+    const dashboardLayout = document.getElementById('dashboardLayout');
+    const layoutSwitch = document.getElementById('layoutModeSwitch');
+    const friendsGrid = document.querySelector('.friends-grid');
+    const filesCard = document.querySelector('.files-main-card');
+    const sharedFilesCard = document.querySelector('.shared-files-card');
+
+    if (!dashboardLayout || !layoutSwitch) {
+        return;
+    }
+
+    const isFilesMain = layoutType === 'compact';
+    dashboardLayout.classList.toggle('files-main', isFilesMain);
+    layoutSwitch.checked = isFilesMain;
+
+    if (sharedFilesCard && friendsGrid && filesCard) {
+        if (isFilesMain) {
+            if (!friendsGrid.contains(sharedFilesCard)) {
+                friendsGrid.appendChild(sharedFilesCard);
+            }
+        } else if (sharedFilesCard.parentElement !== dashboardLayout) {
+            filesCard.insertAdjacentElement('afterend', sharedFilesCard);
+        }
+    }
+
+    localStorage.setItem('dashboardLayoutPreference', isFilesMain ? 'compact' : 'default');
+}
+
 // Load saved view preference on page load
 document.addEventListener('DOMContentLoaded', function() {
     const savedView = localStorage.getItem('fileViewPreference');
     if (savedView === 'grid') {
         switchView('grid');
+    }
+
+    const savedLayout = localStorage.getItem('dashboardLayoutPreference');
+    if (savedLayout === 'compact' || savedLayout === 'files-main') {
+        switchDashboardLayout('compact');
+    } else {
+        switchDashboardLayout('default');
     }
 });
 
