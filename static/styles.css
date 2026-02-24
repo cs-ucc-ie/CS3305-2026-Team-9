@@ -637,6 +637,15 @@ a:focus-visible {
   .dashboard-layout.files-main .files-main-card {
     grid-column: 1;
   }
+
+  .dashboard-layout.files-main .files-main-card {
+    grid-row: 1;
+  }
+
+  .dashboard-layout.files-main .friends-grid {
+    grid-row: 2;
+    margin-top: 20px;
+  }
 }
 
 /* Friend request cards */
@@ -2543,6 +2552,10 @@ form * {
 
   /* Grid view responsive */
   .file-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-layout.files-main .file-grid {
     grid-template-columns: 1fr;
   }
 
