@@ -2085,6 +2085,10 @@ form * {
   margin-top: 20px;
 }
 
+.dashboard-layout.files-main .file-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .file-card {
   background: var(--card-2);
   border: 1px solid var(--border);

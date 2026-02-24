@@ -109,7 +109,7 @@
         {% if outgoing_requests %}
             <ul>
                 {% for req in outgoing_requests %}
-                    <li>Waiting for {{ req.friend_id }} to accept</li>
+                    <li>Waiting for <strong>{{ req.friend_id }}</strong> to accept</li>
                 {% endfor %}
             </ul>
         {% else %}
