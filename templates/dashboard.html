@@ -25,18 +25,15 @@
     </div>
     <div class="dashboard-actions">
         <a href="{{ url_for('upload') }}" class="btn btn-sm">Upload New File</a>
+        <div class="dashboard-layout-toggle" role="group" aria-label="Dashboard layout toggle">
+            <span class="layout-label">Default</span>
+            <label class="layout-switch" for="layoutModeSwitch">
+                <input type="checkbox" id="layoutModeSwitch" onchange="switchDashboardLayout(this.checked ? 'compact' : 'default')">
+                <span class="layout-slider" aria-hidden="true"></span>
+            </label>
+            <span class="layout-label">Compact</span>
+        </div>
         <a href="{{ url_for('settings') }}" class="btn btn-secondary btn-sm">Settings</a>
-    </div>
-</div>
-
-<div class="dashboard-layout-toggle-row">
-    <div class="dashboard-layout-toggle" role="group" aria-label="Dashboard layout toggle">
-        <span class="layout-label">Default</span>
-        <label class="layout-switch" for="layoutModeSwitch">
-            <input type="checkbox" id="layoutModeSwitch" onchange="switchDashboardLayout(this.checked ? 'compact' : 'default')">
-            <span class="layout-slider" aria-hidden="true"></span>
-        </label>
-        <span class="layout-label">Compact</span>
     </div>
 </div>
 
