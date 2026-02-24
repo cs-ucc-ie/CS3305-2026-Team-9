@@ -477,6 +477,10 @@ function switchView(viewType) {
     const listBtn = document.getElementById('listViewBtn');
     const gridBtn = document.getElementById('gridViewBtn');
 
+    if (!fileTable || !fileGrid || !listBtn || !gridBtn) {
+        return;
+    }
+
     if (viewType === 'grid') {
         fileTable.style.display = 'none';
         fileGrid.style.display = 'grid';
@@ -537,16 +541,23 @@ function switchDashboardLayout(layoutType) {
 
 // Load saved view preference on page load
 document.addEventListener('DOMContentLoaded', function() {
-    const savedView = localStorage.getItem('fileViewPreference');
-    if (savedView === 'grid') {
-        switchView('grid');
+    try {
+        const savedLayout = localStorage.getItem('dashboardLayoutPreference');
+        if (savedLayout === 'compact' || savedLayout === 'files-main') {
+            switchDashboardLayout('compact');
+        } else {
+            switchDashboardLayout('default');
+        }
+    } catch (error) {
+        switchDashboardLayout('default');
     }
 
-    const savedLayout = localStorage.getItem('dashboardLayoutPreference');
-    if (savedLayout === 'compact' || savedLayout === 'files-main') {
-        switchDashboardLayout('compact');
-    } else {
-        switchDashboardLayout('default');
+    try {
+        const savedView = localStorage.getItem('fileViewPreference');
+        if (savedView === 'grid') {
+            switchView('grid');
+        }
+    } catch (error) {
     }
 });
 
