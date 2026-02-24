@@ -52,27 +52,6 @@
     </div>
 
     <div class="card card-mb">
-        <h2>Your Friends</h2>
-
-        {% if friends %}
-        <ul>
-            {% for f in friends %}
-                {% set friend = f.friend_id if f.user_id == g.user else f.user_id %}
-                <li>
-                    {{ friend }}
-                    <form method="POST" action="{{ url_for('unfriend', friend_id=friend) }}" class="form-inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-danger btn-sm">Unfriend</button>
-                    </form>
-                </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-            <p>You have no friends yet</p>
-        {% endif %}
-    </div>
-
-    <div class="card card-mb">
         <h2>Friend Request</h2>
 
         {% if incoming_requests %}
@@ -97,6 +76,27 @@
             </div>
         {% else %}
             <p>No incoming requests</p>
+        {% endif %}
+    </div>
+
+    <div class="card card-mb">
+        <h2>Your Friends</h2>
+
+        {% if friends %}
+        <ul>
+            {% for f in friends %}
+                {% set friend = f.friend_id if f.user_id == g.user else f.user_id %}
+                <li>
+                    {{ friend }}
+                    <form method="POST" action="{{ url_for('unfriend', friend_id=friend) }}" class="form-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Unfriend</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+            <p>You have no friends yet</p>
         {% endif %}
     </div>
 
