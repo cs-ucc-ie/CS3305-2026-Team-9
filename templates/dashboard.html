@@ -512,11 +512,26 @@ function switchDashboardLayout(layoutType) {
 
     if (sharedFilesCard && friendsGrid && filesCard) {
         if (isFilesMain) {
+            if (dashboardLayout.firstElementChild !== filesCard) {
+                dashboardLayout.insertBefore(filesCard, dashboardLayout.firstElementChild);
+            }
+
+            if (filesCard.nextElementSibling !== friendsGrid) {
+                filesCard.insertAdjacentElement('afterend', friendsGrid);
+            }
+
             if (!friendsGrid.contains(sharedFilesCard)) {
                 friendsGrid.appendChild(sharedFilesCard);
             }
-        } else if (sharedFilesCard.parentElement !== dashboardLayout) {
-            filesCard.insertAdjacentElement('afterend', sharedFilesCard);
+        } else {
+            if (sharedFilesCard.parentElement !== dashboardLayout) {
+                filesCard.insertAdjacentElement('afterend', sharedFilesCard);
+            }
+
+            const anchor = sharedFilesCard.parentElement === dashboardLayout ? sharedFilesCard : filesCard;
+            if (anchor.nextElementSibling !== friendsGrid) {
+                anchor.insertAdjacentElement('afterend', friendsGrid);
+            }
         }
     }
 
