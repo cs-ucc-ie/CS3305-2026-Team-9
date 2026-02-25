@@ -83,8 +83,18 @@
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{{ url_for('preview', token=file.share_token) }}" class="btn btn-sm">Preview</a>
-                        <button onclick="navigator.clipboard.writeText('{{ request.url_root }}download/{{ file.share_token }}').then(()=>showToast('Link copied!','success'))" class="btn btn-sm btn-secondary">Copy Link</button>
+                        <div class="hamburger-menu">
+                            <button class="hamburger-btn" onclick="toggleMenu(event, 'home-{{ file.share_token }}')" title="Actions">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </button>
+                            <div class="menu-dropdown" id="home-{{ file.share_token }}">
+                                <a href="{{ url_for('preview', token=file.share_token) }}" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>Preview</a>
+                                <a href="{{ url_for('download', token=file.share_token) }}" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg></span>Download</a>
+                                <button onclick="copyShareLink('{{ request.url_root }}download/{{ file.share_token }}'); closeAllMenus();" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L10 5"></path><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L14 19"></path></svg></span>Copy Link</button>
+                            </div>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -343,5 +353,92 @@
 </div>
 
 {% endif %}
+
+<script>
+// Hamburger menu functionality
+function toggleMenu(event, menuId) {
+    event.stopPropagation();
+    const button = event.currentTarget;
+    const menu = document.getElementById(menuId);
+    const allMenus = document.querySelectorAll('.menu-dropdown');
+    
+    // Close all other menus
+    allMenus.forEach(function(m) {
+        if (m.id !== menuId) {
+            m.classList.remove('show');
+        }
+    });
+    
+    // Toggle current menu
+    const isShowing = menu.classList.contains('show');
+    menu.classList.toggle('show');
+    
+    // Position the menu if showing
+    if (!isShowing) {
+        const rect = button.getBoundingClientRect();
+        const menuWidth = 200; // min-width of menu
+        
+        // Temporarily show menu to get its actual height
+        menu.style.visibility = 'hidden';
+        menu.style.display = 'block';
+        const menuHeight = menu.offsetHeight;
+        menu.style.visibility = 'visible';
+        menu.style.display = ''; // Remove inline display style to let CSS class control it
+        
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        
+        // For table view (fixed positioning)
+        if (menuId.startsWith('home-')) {
+            // Decide whether to show above or below
+            if (spaceBelow < menuHeight + 10 && spaceAbove > spaceBelow) {
+                // Show above the button
+                menu.style.top = (rect.top - menuHeight - 4) + 'px';
+            } else {
+                // Show below the button
+                menu.style.top = (rect.bottom + 4) + 'px';
+            }
+            
+            // Horizontal positioning
+            menu.style.left = (rect.right - menuWidth) + 'px';
+            
+            // Adjust if menu would go off screen horizontally
+            if (rect.right - menuWidth < 0) {
+                menu.style.left = '10px';
+            }
+        }
+    }
+}
+
+function closeAllMenus() {
+    const allMenus = document.querySelectorAll('.menu-dropdown');
+    allMenus.forEach(function(m) {
+        m.classList.remove('show');
+    });
+}
+
+// Close menus when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.hamburger-menu')) {
+        closeAllMenus();
+    }
+});
+
+// Close menus on scroll
+window.addEventListener('scroll', closeAllMenus, true);
+
+// Close menus on window resize
+window.addEventListener('resize', closeAllMenus);
+
+function copyShareLink(link) {
+    navigator.clipboard.writeText(link).then(() => {
+        showToast('Share link copied to clipboard!', 'success');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        showToast('Failed to copy link', 'error');
+    });
+}
+</script>
 
 {% endblock %}
