@@ -117,31 +117,31 @@
         <div class="files-title-inline">
             <h2>My Uploaded Files ({{ files|length }})</h2>
             {% if files %}
-            <a href="{{ url_for('download_all') }}" class="btn btn-secondary btn-sm" onclick="showToast('Preparing ZIP download...', 'info')">Download All</a>
+            <div class="files-actions-inline">
+                <a href="{{ url_for('download_all') }}" class="btn btn-secondary btn-sm" onclick="showToast('Preparing ZIP download...', 'info')">Download All</a>
+                <div class="view-toggle-container files-header-toggle">
+                    <button id="listViewBtn" class="view-toggle-btn active" onclick="switchView('list')" title="List view">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                </button>
+                <button id="gridViewBtn" class="view-toggle-btn" onclick="switchView('grid')" title="Grid view">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                </button>
+                </div>
+            </div>
             {% endif %}
         </div>
-        {% if files %}
-        <div class="view-toggle-container files-header-toggle">
-            <button id="listViewBtn" class="view-toggle-btn active" onclick="switchView('list')" title="List view">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-            </svg>
-        </button>
-        <button id="gridViewBtn" class="view-toggle-btn" onclick="switchView('grid')" title="Grid view">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
-            </svg>
-        </button>
-        </div>
-        {% endif %}
     </div>
 
     {% if files %}

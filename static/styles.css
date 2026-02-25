@@ -2282,9 +2282,23 @@ form * {
 }
 
 .files-title-inline {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
+}
+
+.files-actions-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.files-actions-inline .btn-sm {
+  height: 100%;
 }
 
 .files-card-header h2 {
@@ -2307,21 +2321,28 @@ form * {
 
 .view-toggle-container {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin-bottom: 0;
+  height: 100%;
+  margin-left: auto;
 }
 
 .view-toggle-btn {
+  appearance: none;
   background: var(--card-2);
   border: 1px solid var(--border);
   color: var(--muted);
-  padding: 8px 12px;
+  padding: 6px 12px;
   border-radius: var(--radius-xs);
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 100%;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .view-toggle-btn:hover {
@@ -2360,6 +2381,10 @@ form * {
   .files-title-inline {
     width: 100%;
     flex-wrap: wrap;
+  }
+
+  .files-actions-inline {
+    width: 100%;
   }
   
   .view-toggle-container {
