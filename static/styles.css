@@ -269,19 +269,35 @@ main, .page {
 
 /* ===== Header (from base.html) ===== */
 header {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 18px 18px 0;
+  width: 100%;
+  margin: 0;
+  padding: 14px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  background: linear-gradient(135deg, var(--card) 0%, var(--overlay-light-4) 100%);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--primary) 50%, transparent 100%);
+  opacity: 0.65;
+  pointer-events: none;
 }
 
 .header-brand {
   font-size: 20px;
   font-weight: 800;
-  color: var(--text) !important;
+  color: var(--primary) !important;
   text-decoration: none !important;
   letter-spacing: -0.02em;
   padding: 0 !important;
@@ -301,6 +317,8 @@ header {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
 }
 
 .header-user {
@@ -399,27 +417,60 @@ header a:focus-visible {
 /* ===== Theme dropdown select ===== */
 .theme-select {
   appearance: none;
-  background: var(--overlay-light-4);
-  background-color: var(--overlay-light-4);
+  background:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(135deg, var(--overlay-light-10) 0%, var(--overlay-light-4) 100%);
+  background-position:
+    calc(100% - 16px) calc(50% - 2px),
+    calc(100% - 10px) calc(50% - 2px),
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
   color: var(--text);
   border: 1px solid var(--border);
-  padding: 6px 12px;
-  border-radius: var(--radius-xs);
+  padding: 6px 34px 6px 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
   height: 38px;
   line-height: 1.5;
   box-sizing: border-box;
-  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  box-shadow: inset 0 1px 0 var(--overlay-light-2);
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .theme-select:hover {
-  background: var(--overlay-light-8);
+  background:
+    linear-gradient(45deg, transparent 50%, var(--text) 50%),
+    linear-gradient(135deg, var(--text) 50%, transparent 50%),
+    linear-gradient(135deg, var(--overlay-light-14) 0%, var(--overlay-light-8) 100%);
+  background-position:
+    calc(100% - 16px) calc(50% - 2px),
+    calc(100% - 10px) calc(50% - 2px),
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
   border-color: var(--overlay-light-18);
   transform: translateY(-1px);
+  box-shadow: 0 4px 10px var(--overlay-dark-15);
 }
-.theme-select:focus {
+.theme-select:focus,
+.theme-select:focus-visible {
   outline: none;
-  border-color: var(--text);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--overlay-light-10), inset 0 1px 0 var(--overlay-light-2);
+}
+
+.theme-select:active {
+  transform: translateY(0);
+  box-shadow: inset 0 1px 2px var(--overlay-dark-15);
 }
 
 .theme-toggle:hover {
