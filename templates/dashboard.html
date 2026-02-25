@@ -1,19 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}My Dashboard - ShareLink{% endblock %}
+{% block title %}{{ g.user }}'s Dashboard - ShareLink{% endblock %}
 
 {% block main_content %}
-
-<div class="notif-wrapper">
-    <div id="notif-bell" class="notif-bell">
-        🔔
-        <span id="notif-count" class="notif-count hidden"></span>
-    </div>
-</div>
-
-<div id="notif-dropdown" class="notif-dropdown hidden"></div>
-
-
 
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -23,110 +12,165 @@
     {% endif %}
 {% endwith %}
 
-<h1>My Dashboard</h1>
-
-<p>
-    <a href="{{ url_for('settings') }}" class="btn btn-secondary">Settings</a>
-</p>
-
-<div class="card card-mb">
-    <h2>Add a Friend</h2>
-    <form class="form-inline" method="POST" action="{{ url_for('add_friend') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="text" name="friend_id" placeholder="Enter friend's username">
-        <button type="submit" class="btn btn-sm">Add Friend</button>
-    </form>
+<div class="dashboard-header">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <h1>{{ g.user }}'s Dashboard</h1>
+        <div class="notif-wrapper">
+            <div id="notif-bell" class="notif-bell">
+                🔔
+                <span id="notif-count" class="notif-count hidden"></span>
+            </div>
+            <div id="notif-dropdown" class="notif-dropdown hidden"></div>
+        </div>
+    </div>
+    <div class="dashboard-actions">
+        <a href="{{ url_for('upload') }}" class="btn btn-sm">Upload New File</a>
+        <div class="dashboard-layout-toggle" role="group" aria-label="Dashboard layout toggle">
+            <span class="layout-label">Default</span>
+            <label class="layout-switch" for="layoutModeSwitch">
+                <input type="checkbox" id="layoutModeSwitch" onchange="switchDashboardLayout(this.checked ? 'compact' : 'default')">
+                <span class="layout-slider" aria-hidden="true"></span>
+            </label>
+            <span class="layout-label">Compact</span>
+        </div>
+        <a href="{{ url_for('settings') }}" class="btn btn-secondary btn-sm">Settings</a>
+    </div>
 </div>
 
+<div id="dashboardLayout" class="dashboard-layout">
+<div class="friends-grid">
+    <div class="card card-mb">
+        <h2>Add a Friend</h2>
+        <form class="form-inline" method="POST" action="{{ url_for('add_friend') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="friend_id" placeholder="Enter friend's username">
+            <button type="submit" class="btn btn-sm">Add Friend</button>
+        </form>
+    </div>
 
-<div class="card card-mb">
-    <h2>Your Friends</h2>
+    <div class="card card-mb">
+        <h2>Friend Request</h2>
 
-    {% if friends %}
-    <ul>
-        {% for f in friends %}
-            {% set friend = f.friend_id if f.user_id == g.user else f.user_id %}
-            <li>
-                {{ friend }}
-                <form method="POST" action="{{ url_for('unfriend', friend_id=friend) }}" class="form-inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger btn-sm">Unfriend</button>
-                </form>
-            </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-        <p>You have no friends yet</p>
-    {% endif %}
-</div>
+        {% if incoming_requests %}
+            <div class="request-list">
+                {% for req in incoming_requests %}
+                    <div class="request-card">
+                        <div class="request-info">
+                            <strong>{{ req.user_id }}</strong> wants to be your friend
+                        </div>
+                        <div class="request-actions">
+                            <form method="POST" action="{{ url_for('accept_friend', request_id=req.id) }}" class="form-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm">Accept</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('decline_friend', request_id=req.id) }}" class="form-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-danger btn-sm">Decline</button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No incoming requests</p>
+        {% endif %}
+    </div>
 
-<div class="card card-mb">
-    <h2>Friend Request</h2>
+    <div class="card card-mb">
+        <h2>Your Friends</h2>
 
-    {% if incoming_requests %}
-        {% for req in incoming_requests %}
-            <p>
-                {{ req.user_id }} wants to be your friend
-                <form method="POST" action="{{ url_for('accept_friend', request_id=req.id) }}" class="form-inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-sm">Accept</button>
-                </form>
-                <form method="POST" action="{{ url_for('decline_friend', request_id=req.id) }}" class="form-inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger btn-sm">Decline</button>
-                </form>
-            </p>
-        {% endfor %}
-    {% else %}
-        <p>No incoming requests</p>
-    {% endif %}
-</div>
-
-<div class="card card-mb">
-    <h2>Requests You Sent</h2>
-
-    {% if outgoing_requests %}
+        {% if friends %}
         <ul>
-            {% for req in outgoing_requests %}
-                <li>Waiting for {{ req.friend_id }} to accept</li>
+            {% for f in friends %}
+                {% set friend = f.friend_id if f.user_id == g.user else f.user_id %}
+                <li>
+                    {{ friend }}
+                    <form method="POST" action="{{ url_for('unfriend', friend_id=friend) }}" class="form-inline unfriend-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Unfriend</button>
+                    </form>
+                </li>
             {% endfor %}
         </ul>
-    {% else %}
-        <p>You haven't sent any requests</p>
-    {% endif %}
+        {% else %}
+            <p>You have no friends yet</p>
+        {% endif %}
+    </div>
+
+    <div class="card card-mb">
+        <h2>Requests You Sent</h2>
+
+        {% if outgoing_requests %}
+            <ul>
+                {% for req in outgoing_requests %}
+                    <li>Waiting for <strong>{{ req.friend_id }}</strong> to accept</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>You haven't sent any requests</p>
+        {% endif %}
+    </div>
 </div>
 
-<p class="mb-2">
-    <a href="{{ url_for('upload') }}" class="btn">Upload New File</a>
-    {% if files %}
-    <a href="{{ url_for('download_all') }}" class="btn btn-secondary" onclick="showToast('Preparing ZIP download...', 'info')">📦 Download All as ZIP</a>
-    {% endif %}
-</p>
-
-<div class="card">
-    <h2>My Uploaded Files ({{ files|length }})</h2>
-
-    <form method="GET" action="{{ url_for('dashboard') }}" class="form-inline mb-2">
-        <div class="search-bar">
-            <input type="text" name="q" placeholder="Search files..." value="{{ request.args.get('q', '') }}" class="search-input">
-            {% if request.args.get('q') %}
-                <a href="{{ url_for('dashboard', sort=request.args.get('sort', 'newest')) }}" class="search-clear" title="Clear search">&times;</a>
+<div class="card files-main-card">
+    <div class="files-card-header">
+        <div class="files-title-inline">
+            <h2>My Uploaded Files ({{ files|length }})</h2>
+            {% if files %}
+            <div class="files-actions-inline">
+                <a href="{{ url_for('download_all') }}" class="btn btn-secondary btn-sm" onclick="showToast('Preparing ZIP download...', 'info')">Download All</a>
+                <div class="view-toggle-container files-header-toggle">
+                    <button id="listViewBtn" class="view-toggle-btn active" onclick="switchView('list')" title="List view">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                </button>
+                <button id="gridViewBtn" class="view-toggle-btn" onclick="switchView('grid')" title="Grid view">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                </button>
+                </div>
+            </div>
             {% endif %}
         </div>
-
-        <select name="sort" onchange="this.form.submit()" class="sort-select">
-            <option value="newest" {% if request.args.get('sort') == 'newest' %}selected{% endif %}>Newest</option>
-            <option value="oldest" {% if request.args.get('sort') == 'oldest' %}selected{% endif %}>Oldest</option>
-            <option value="largest" {% if request.args.get('sort') == 'largest' %}selected{% endif %}>Largest</option>
-            <option value="popular" {% if request.args.get('sort') == 'popular' %}selected{% endif %}>Most Downloaded</option>
-        </select>
-
-        <button type="submit" class="btn btn-sm">Search</button>
-    </form>
+    </div>
 
     {% if files %}
+    <div class="file-controls-bar">
+        <form method="GET" action="{{ url_for('dashboard') }}" class="form-inline mb-2 file-search-form">
+            <div class="search-bar">
+                <input type="text" name="q" placeholder="Search files..." value="{{ request.args.get('q', '') }}" class="search-input">
+                {% if request.args.get('q') %}
+                    <a href="{{ url_for('dashboard', sort=request.args.get('sort', 'newest')) }}" class="search-clear" title="Clear search">&times;</a>
+                {% endif %}
+            </div>
+            <input type="hidden" name="sort" value="{{ request.args.get('sort', 'newest') }}">
+            <button type="submit" class="btn btn-sm">Search</button>
+        </form>
+
+        <form method="GET" action="{{ url_for('dashboard') }}" class="form-inline mb-2 file-sort-form">
+            <input type="hidden" name="q" value="{{ request.args.get('q', '') }}">
+            <select name="sort" onchange="this.form.submit()" class="sort-select" aria-label="Sort files">
+                <option value="newest" {% if request.args.get('sort') == 'newest' %}selected{% endif %}>Newest</option>
+                <option value="oldest" {% if request.args.get('sort') == 'oldest' %}selected{% endif %}>Oldest</option>
+                <option value="largest" {% if request.args.get('sort') == 'largest' %}selected{% endif %}>Largest</option>
+                <option value="popular" {% if request.args.get('sort') == 'popular' %}selected{% endif %}>Most Downloaded</option>
+            </select>
+        </form>
+    </div>
+    {% endif %}
+
     <div class="table-wrapper">
-        <table class="file-table">
+        <table class="file-table" id="fileTable">
             <thead>
                 <tr>
                     <th>Filename</th>
@@ -142,7 +186,17 @@
                 {% for file in files %}
                 <tr>
                     <td>
-                        <strong>{{ file.original_filename }}</strong>
+                        <div class="filename-cell">
+                            <strong>{{ file.original_filename }}</strong>
+                            <span class="file-meta-info" tabindex="0" aria-label="File details">
+                                <span class="info-trigger" aria-hidden="true">i</span>
+                                <span class="info-tooltip" role="tooltip">
+                                    <span><strong>Size:</strong> {{ "%.2f"|format(file.file_size / 1024 / 1024) }} MB</span>
+                                    <span><strong>Uploaded:</strong> {{ file.upload_date[:16] }}</span>
+                                    <span><strong>Expires:</strong> {{ file.expiry_date[:16] }}</span>
+                                </span>
+                            </span>
+                        </div>
                     </td>
                     <td>
                         {{ "%.2f"|format(file.file_size / 1024 / 1024) }} MB
@@ -159,58 +213,143 @@
                         </span>
                     </td>
                     <td>
-                        {% if file.expiry_date < now %}
-                            <span class="status-expired">Expired</span>
-                        {% else %}
-                            <span class="status-active">Active</span>
-                        {% endif %}
-                        {% if file.is_encrypted %}
-                            <br><span class="status-encrypted">E2E Encrypted</span>
-                        {% endif %}
+                        <span class="status-inline-group">
+                            {% if file.expiry_date < now %}
+                                <span class="status-indicator status-indicator-expired" data-status="Expired" tabindex="0" aria-label="Expired"></span>
+                            {% else %}
+                                <span class="status-indicator status-indicator-active" data-status="Active" tabindex="0" aria-label="Active"></span>
+                            {% endif %}
+                            <strong class="status-separator" aria-hidden="true">|</strong>
+                            <span class="encryption-indicator {% if file.is_encrypted %}encryption-indicator-locked{% else %}encryption-indicator-unlocked{% endif %}"
+                                  data-encryption="{% if file.is_encrypted %}E2E Encrypted{% else %}Not Encrypted{% endif %}"
+                                  tabindex="0"
+                                  aria-label="{% if file.is_encrypted %}E2E Encrypted{% else %}Not Encrypted{% endif %}"></span>
+                        </span>
                     </td>
                     <td>
-                        <a href="{{ url_for('preview', token=file.share_token) }}" class="btn btn-secondary btn-sm btn-inline">👁️ Preview</a>
-                        <a href="{{ url_for('download', token=file.share_token) }}" class="btn btn-sm btn-inline">Download</a>
-                        <button onclick="copyShareLink('{{ request.url_root }}download/{{ file.share_token }}')" class="btn btn-secondary btn-sm btn-inline">📋 Copy</button>
-                        <button onclick="openRename('{{ file.share_token }}', '{{ file.original_filename }}')" class="btn btn-secondary btn-sm btn-inline">✏️ Rename</button>
-                        <form action="{{ url_for('delete_file', token=file.share_token) }}" method="POST" class="form-inline" onsubmit="return confirm('Are you sure you want to delete this file? This cannot be undone.');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-danger btn-sm">🗑️ Delete</button>
-                        </form>
-
-                        {% if file.is_encrypted %}
-                        <p class="encrypted-notice">
-                            Encrypted — share the copied link directly with your friend
-                        </p>
-                        {% else %}
-                        <form method="POST" action="{{ url_for('share_file', token=file['share_token']) }}" class="form-share" onsubmit="return validateShareForm(this)">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <div class="share-friend-list">
-                                {% for friend in friends %}
-                                    {% set friend_name = friend['friend_id'] if friend['user_id'] == g.user else friend['user_id'] %}
-                                    <label class="share-friend-option">
-                                        <input type="checkbox" name="friend_ids" value="{{ friend_name }}">
-                                        <span>{{ friend_name }}</span>
-                                    </label>
-                                {% endfor %}
+                        <div class="hamburger-menu">
+                            <button class="hamburger-btn" onclick="toggleMenu(event, 'table-{{ file.share_token }}')" title="Actions">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </button>
+                            <div class="menu-dropdown" id="table-{{ file.share_token }}">
+                                <a href="{{ url_for('preview', token=file.share_token) }}" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>Preview</a>
+                                <a href="{{ url_for('download', token=file.share_token) }}" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg></span>Download</a>
+                                <button onclick="copyShareLink('{{ request.url_root }}download/{{ file.share_token }}'); closeAllMenus();" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L10 5"></path><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L14 19"></path></svg></span>Copy Link</button>
+                                <button onclick="openRename('{{ file.share_token }}', '{{ file.original_filename }}'); closeAllMenus();" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"></path></svg></span>Rename</button>
+                                <button onclick="deleteFile('{{ file.share_token }}'); closeAllMenus();" class="menu-item menu-item-danger"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg></span>Delete</button>
+                                {% if not file.is_encrypted and friends %}
+                                <div class="menu-divider"></div>
+                                <div class="menu-share-section">
+                                    <form method="POST" action="{{ url_for('share_file', token=file['share_token']) }}" class="menu-share-form" onsubmit="return validateShareForm(this)">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <label class="menu-label">Share with:</label>
+                                        <div class="share-friend-list">
+                                            {% for friend in friends %}
+                                                {% set friend_name = friend['friend_id'] if friend['user_id'] == g.user else friend['user_id'] %}
+                                                <label class="share-friend-option">
+                                                    <input type="checkbox" name="friend_ids" value="{{ friend_name }}">
+                                                    <span>{{ friend_name }}</span>
+                                                </label>
+                                            {% endfor %}
+                                        </div>
+                                        <button type="submit" class="btn btn-sm menu-btn">Send</button>
+                                    </form>
+                                </div>
+                                {% endif %}
                             </div>
-                            <button type="submit" class="btn btn-sm">Share</button>
-                        </form>
-                        {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    {% elif request.args.get('q') %}
-        <p class="text-muted mt-2">No files matching "{{ request.args.get('q') }}". <a href="{{ url_for('dashboard') }}">Clear search</a></p>
-    {% else %}
-        <p class="text-muted mt-2">You haven't uploaded any files yet. <a href="{{ url_for('upload') }}">Upload your first file</a></p>
+
+    <div class="file-grid" id="fileGrid" style="display: none;">
+        {% for file in files %}
+        <div class="file-card">
+            <div class="file-card-header">
+                <div class="file-card-icon">📄</div>
+                <div class="file-card-title">{{ file.original_filename }}</div>
+                <div class="hamburger-menu">
+                    <button class="hamburger-btn" onclick="toggleMenu(event, 'grid-{{ file.share_token }}')" title="Actions">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                    <div class="menu-dropdown" id="grid-{{ file.share_token }}">
+                        <a href="{{ url_for('preview', token=file.share_token) }}" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>Preview</a>
+                        <a href="{{ url_for('download', token=file.share_token) }}" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg></span>Download</a>
+                        <button onclick="copyShareLink('{{ request.url_root }}download/{{ file.share_token }}'); closeAllMenus();" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L10 5"></path><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L14 19"></path></svg></span>Copy Link</button>
+                        <button onclick="openRename('{{ file.share_token }}', '{{ file.original_filename }}'); closeAllMenus();" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"></path></svg></span>Rename</button>
+                        <button onclick="deleteFile('{{ file.share_token }}'); closeAllMenus();" class="menu-item menu-item-danger"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg></span>Delete</button>
+                        {% if not file.is_encrypted and friends %}
+                        <div class="menu-divider"></div>
+                        <div class="menu-share-section">
+                            <form method="POST" action="{{ url_for('share_file', token=file['share_token']) }}" class="menu-share-form" onsubmit="return validateShareForm(this)">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <label class="menu-label">Share with:</label>
+                                <div class="share-friend-list">
+                                    {% for friend in friends %}
+                                        {% set friend_name = friend['friend_id'] if friend['user_id'] == g.user else friend['user_id'] %}
+                                        <label class="share-friend-option">
+                                            <input type="checkbox" name="friend_ids" value="{{ friend_name }}">
+                                            <span>{{ friend_name }}</span>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                                <button type="submit" class="btn btn-sm menu-btn">Send</button>
+                            </form>
+                        </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+            </div>
+            <div class="file-card-body">
+                <div class="file-card-info">
+                    <span class="file-card-label">Size:</span>
+                    <span>{{ "%.2f"|format(file.file_size / 1024 / 1024) }} MB</span>
+                </div>
+                <div class="file-card-info">
+                    <span class="file-card-label">Uploaded:</span>
+                    <span>{{ file.upload_date[:16] }}</span>
+                </div>
+                <div class="file-card-info">
+                    <span class="file-card-label">Expires:</span>
+                    <span>{{ file.expiry_date[:16] }}</span>
+                </div>
+                <div class="file-card-info">
+                    <span class="file-card-label">Downloads:</span>
+                    <span class="download-badge">{{ file.download_count }}</span>
+                </div>
+                <div class="file-card-status">
+                    {% if file.expiry_date < now %}
+                        <span class="status-expired">Expired</span>
+                    {% else %}
+                        <span class="status-active">Active</span>
+                    {% endif %}
+                    {% if file.is_encrypted %}
+                        <span class="status-encrypted">E2E Encrypted</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% if not files %}
+        {% if request.args.get('q') %}
+            <p class="text-muted mt-2">No files matching "{{ request.args.get('q') }}". <a href="{{ url_for('dashboard') }}">Clear search</a></p>
+        {% else %}
+            <p class="text-muted mt-2">You haven't uploaded any files yet. <a href="{{ url_for('upload') }}">Upload your first file</a></p>
+        {% endif %}
     {% endif %}
+
 </div>
 
-<div class="card mt-3">
+<div class="card mt-3 shared-files-card">
     <h2>Files Shared With Me</h2>
 
     {% if shared_with_me %}
@@ -227,6 +366,7 @@
     {% else %}
         <p>No one has shared files with you.</p>
     {% endif %}
+</div>
 </div>
 
 <!-- Rename modal -->
@@ -246,6 +386,190 @@
 
 {% block scripts %}
 <script>
+// Hamburger menu functionality
+function toggleMenu(event, menuId) {
+    event.stopPropagation();
+    const button = event.currentTarget;
+    const menu = document.getElementById(menuId);
+    const allMenus = document.querySelectorAll('.menu-dropdown');
+    
+    // Close all other menus
+    allMenus.forEach(function(m) {
+        if (m.id !== menuId) {
+            m.classList.remove('show');
+        }
+    });
+    
+    // Toggle current menu
+    const isShowing = menu.classList.contains('show');
+    menu.classList.toggle('show');
+    
+    // Position the menu if showing
+    if (!isShowing) {
+        const rect = button.getBoundingClientRect();
+        const menuWidth = 200; // min-width of menu
+        
+        // Temporarily show menu to get its actual height
+        menu.style.visibility = 'hidden';
+        menu.style.display = 'block';
+        const menuHeight = menu.offsetHeight;
+        menu.style.visibility = 'visible';
+        menu.style.display = ''; // Remove inline display style to let CSS class control it
+        
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        
+        // For table view (fixed positioning)
+        if (menuId.startsWith('table-')) {
+            // Decide whether to show above or below
+            if (spaceBelow < menuHeight + 10 && spaceAbove > spaceBelow) {
+                // Show above the button
+                menu.style.top = (rect.top - menuHeight - 4) + 'px';
+            } else {
+                // Show below the button
+                menu.style.top = (rect.bottom + 4) + 'px';
+            }
+            
+            // Horizontal positioning
+            menu.style.left = (rect.right - menuWidth) + 'px';
+            
+            // Adjust if menu would go off screen horizontally
+            if (rect.right - menuWidth < 0) {
+                menu.style.left = '10px';
+            }
+        }
+        // For grid view (absolute positioning)
+        else if (menuId.startsWith('grid-')) {
+            // Decide whether to show above or below
+            if (spaceBelow < menuHeight + 10 && spaceAbove > spaceBelow) {
+                // Show above the button
+                menu.style.top = 'auto';
+                menu.style.bottom = '100%';
+                menu.style.marginBottom = '4px';
+                menu.style.marginTop = '0';
+            } else {
+                // Show below the button (default)
+                menu.style.top = '100%';
+                menu.style.bottom = 'auto';
+                menu.style.marginTop = '4px';
+                menu.style.marginBottom = '0';
+            }
+        }
+    }
+}
+
+function closeAllMenus() {
+    const allMenus = document.querySelectorAll('.menu-dropdown');
+    allMenus.forEach(function(m) {
+        m.classList.remove('show');
+    });
+}
+
+// Close menus when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.hamburger-menu')) {
+        closeAllMenus();
+    }
+});
+
+// Close menus on scroll
+window.addEventListener('scroll', closeAllMenus, true);
+
+// Close menus on window resize
+window.addEventListener('resize', closeAllMenus);
+
+// View toggle functionality
+function switchView(viewType) {
+    const fileTable = document.querySelector('.table-wrapper');
+    const fileGrid = document.getElementById('fileGrid');
+    const listBtn = document.getElementById('listViewBtn');
+    const gridBtn = document.getElementById('gridViewBtn');
+
+    if (!fileTable || !fileGrid || !listBtn || !gridBtn) {
+        return;
+    }
+
+    if (viewType === 'grid') {
+        fileTable.style.display = 'none';
+        fileGrid.style.display = 'grid';
+        listBtn.classList.remove('active');
+        gridBtn.classList.add('active');
+        localStorage.setItem('fileViewPreference', 'grid');
+    } else {
+        fileTable.style.display = 'block';
+        fileGrid.style.display = 'none';
+        listBtn.classList.add('active');
+        gridBtn.classList.remove('active');
+        localStorage.setItem('fileViewPreference', 'list');
+    }
+}
+
+function switchDashboardLayout(layoutType) {
+    const dashboardLayout = document.getElementById('dashboardLayout');
+    const layoutSwitch = document.getElementById('layoutModeSwitch');
+    const friendsGrid = document.querySelector('.friends-grid');
+    const filesCard = document.querySelector('.files-main-card');
+    const sharedFilesCard = document.querySelector('.shared-files-card');
+
+    if (!dashboardLayout || !layoutSwitch) {
+        return;
+    }
+
+    const isFilesMain = layoutType === 'compact';
+    dashboardLayout.classList.toggle('files-main', isFilesMain);
+    layoutSwitch.checked = isFilesMain;
+
+    if (sharedFilesCard && friendsGrid && filesCard) {
+        if (isFilesMain) {
+            if (dashboardLayout.firstElementChild !== filesCard) {
+                dashboardLayout.insertBefore(filesCard, dashboardLayout.firstElementChild);
+            }
+
+            if (filesCard.nextElementSibling !== friendsGrid) {
+                filesCard.insertAdjacentElement('afterend', friendsGrid);
+            }
+
+            if (!friendsGrid.contains(sharedFilesCard)) {
+                friendsGrid.appendChild(sharedFilesCard);
+            }
+        } else {
+            if (sharedFilesCard.parentElement !== dashboardLayout) {
+                filesCard.insertAdjacentElement('afterend', sharedFilesCard);
+            }
+
+            const anchor = sharedFilesCard.parentElement === dashboardLayout ? sharedFilesCard : filesCard;
+            if (anchor.nextElementSibling !== friendsGrid) {
+                anchor.insertAdjacentElement('afterend', friendsGrid);
+            }
+        }
+    }
+
+    localStorage.setItem('dashboardLayoutPreference', isFilesMain ? 'compact' : 'default');
+}
+
+// Load saved view preference on page load
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const savedLayout = localStorage.getItem('dashboardLayoutPreference');
+        if (savedLayout === 'compact' || savedLayout === 'files-main') {
+            switchDashboardLayout('compact');
+        } else {
+            switchDashboardLayout('default');
+        }
+    } catch (error) {
+        switchDashboardLayout('default');
+    }
+
+    try {
+        const savedView = localStorage.getItem('fileViewPreference');
+        if (savedView === 'grid') {
+            switchView('grid');
+        }
+    } catch (error) {
+    }
+});
+
 function copyShareLink(link) {
     navigator.clipboard.writeText(link).then(() => {
         showToast('Share link copied to clipboard!', 'success');
@@ -253,6 +577,25 @@ function copyShareLink(link) {
         console.error('Failed to copy:', err);
         showToast('Failed to copy link', 'error');
     });
+}
+
+// Delete file functionality
+function deleteFile(token) {
+    if (confirm('Are you sure you want to delete this file? This cannot be undone.')) {
+        var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/delete/' + token;
+        
+        var csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 
 // Rename functionality
