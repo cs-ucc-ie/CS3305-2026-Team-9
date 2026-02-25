@@ -111,8 +111,14 @@
                 toast.className = 'toast toast-' + type;
 
                 var icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
-                toast.innerHTML = '<span class="toast-icon">' + (icons[type] || icons.info) + '</span>' +
-                    '<span class="toast-message">' + message + '</span>';
+                var iconSpan = document.createElement('span');
+                iconSpan.className = 'toast-icon';
+                iconSpan.textContent = icons[type] || icons.info;
+                var msgSpan = document.createElement('span');
+                msgSpan.className = 'toast-message';
+                msgSpan.textContent = message;
+                toast.appendChild(iconSpan);
+                toast.appendChild(msgSpan);
 
                 container.appendChild(toast);
 

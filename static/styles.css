@@ -2056,7 +2056,7 @@ form * {
   }
 }
 
-/* ===== Rename modal ===== */
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -2118,7 +2118,6 @@ form * {
   margin-top: 0;
 }
 
-/* ===== Admin dashboard ===== */
 .admin-header {
   margin-bottom: 8px;
 }

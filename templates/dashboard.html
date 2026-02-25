@@ -183,14 +183,17 @@
                             Encrypted — share the copied link directly with your friend
                         </p>
                         {% else %}
-                        <form method="POST" action="{{ url_for('share_file', token=file['share_token']) }}" class="form-share">
+                        <form method="POST" action="{{ url_for('share_file', token=file['share_token']) }}" class="form-share" onsubmit="return validateShareForm(this)">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <select name="friend_id">
+                            <div class="share-friend-list">
                                 {% for friend in friends %}
                                     {% set friend_name = friend['friend_id'] if friend['user_id'] == g.user else friend['user_id'] %}
-                                    <option value="{{ friend_name }}">{{ friend_name }}</option>
+                                    <label class="share-friend-option">
+                                        <input type="checkbox" name="friend_ids" value="{{ friend_name }}">
+                                        <span>{{ friend_name }}</span>
+                                    </label>
                                 {% endfor %}
-                            </select>
+                            </div>
                             <button type="submit" class="btn btn-sm">Share</button>
                         </form>
                         {% endif %}
@@ -301,6 +304,15 @@ function submitRename() {
         showToast('Rename failed', 'error');
     });
 }
+
+function validateShareForm(form) {
+    var checked = form.querySelectorAll('input[name="friend_ids"]:checked');
+    if (checked.length === 0) {
+        showToast('Please select at least one friend to share with', 'warning');
+        return false;
+    }
+    return true;
+}
 </script>
 
 
@@ -321,12 +333,17 @@ document.addEventListener("DOMContentLoaded", function () {
         const res = await fetch("/api/notifications");
         const data = await res.json();
 
-        // Fill dropdown
+        // Fill dropdown (escape to prevent XSS)
+        function esc(s) {
+            var d = document.createElement("div");
+            d.textContent = s || "";
+            return d.innerHTML;
+        }
         dropdown.innerHTML = data.notifications.length
             ? data.notifications.map(n => `
                 <div class="notif-item">
-                    <a href="${n.link || '#'}">${n.message}</a>
-                    <div class="notif-item-time">${n.timestamp}</div>
+                    <a href="${esc(n.link || '#')}">${esc(n.message)}</a>
+                    <div class="notif-item-time">${esc(n.timestamp)}</div>
                 </div>
             `).join("")
             : `<div class="notif-item">No notifications</div>`;
@@ -335,7 +352,11 @@ document.addEventListener("DOMContentLoaded", function () {
         countElem.classList.add("hidden");
 
         // Mark as read
-        await fetch("/api/notifications/mark-read", { method: "POST" });
+        var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        await fetch("/api/notifications/mark-read", {
+            method: "POST",
+            headers: csrfMeta ? { "X-CSRFToken": csrfMeta.getAttribute("content") } : {}
+        });
     };
 
     // Poll for unread notifications

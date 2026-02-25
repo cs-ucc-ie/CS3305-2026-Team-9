@@ -18,6 +18,9 @@ import base64
 import zipfile
 from storage import save_file, save_zip, get_file_response, delete_file as storage_delete_file
 import hashlib
+from app_paths import get_user_data_dir
+
+USER_DATA = get_user_data_dir()
 
 # Simple in-memory rate limiter for login attempts
 login_attempts = defaultdict(list)  # IP -> list of timestamps
@@ -25,12 +28,10 @@ MAX_LOGIN_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 300  # 5 minutes
 
 # Load environment variables
-load_dotenv()
+load_dotenv(os.path.join(USER_DATA, '.env'))
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY')
-if not app.secret_key:
-    raise RuntimeError("SECRET_KEY environment variable is not set")
+app.secret_key = os.getenv('SECRET_KEY') or secrets.token_hex(32)
 app.config['WTF_CSRF_ENABLED'] = True
 csrf = CSRFProtect(app)
 
@@ -174,7 +175,7 @@ def upload_profile_picture():
         return redirect(url_for("settings"))
 
     filename = secure_filename(g.user + "_" + file.filename)
-    profiles_dir = os.path.join(app.root_path, "static", "profiles")
+    profiles_dir = os.path.join(USER_DATA, "static", "profiles")
     os.makedirs(profiles_dir, exist_ok=True)
 
     # Delete old profile picture if it exists
@@ -200,7 +201,7 @@ def upload_profile_picture():
 
 # Configuration — use absolute paths for PythonAnywhere compatibility
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+UPLOAD_FOLDER = os.path.join(USER_DATA, 'uploads')
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'doc', 'docx', 'mp3', 'mp4', 'wav', 'mov', 'avi', 'csv', 'xlsx', 'pptx'}
 
@@ -983,47 +984,68 @@ def rename_file(token):
 
     return jsonify({'success': True, 'new_name': new_name})
 
-# Share a file with a friend
+# Share a file with one or more friends
 @app.route("/share/<token>", methods=["POST"])
 @login_required
 def share_file(token):
     sender_id = session.get("user_id")
-    receiver_id = request.form.get("friend_id")
+    receiver_ids = request.form.getlist("friend_ids")
+
+    if not receiver_ids:
+        flash("Please select at least one friend to share with", "error")
+        return redirect(url_for("dashboard"))
 
     db = get_db()
 
     file = db.execute(
-        "SELECT * FROM files WHERE share_token = ? and user_id = ?",
+        "SELECT * FROM files WHERE share_token = ? AND user_id = ?",
         (token, sender_id)
     ).fetchone()
 
     if file is None:
         flash("You cannot share this file", "error")
-
         return redirect(url_for("dashboard"))
 
-    # Verify receiver is an accepted friend
-    friendship = db.execute(
-        """SELECT * FROM friends
-        WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))
-        AND status = 'accepted'""",
-        (sender_id, receiver_id, receiver_id, sender_id)
-    ).fetchone()
+    shared_with = []
+    skipped = []
 
-    if friendship is None:
-        flash("You can only share files with friends", "error")
+    for receiver_id in receiver_ids:
+        # Verify receiver is an accepted friend
+        friendship = db.execute(
+            """SELECT * FROM friends
+            WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))
+            AND status = 'accepted'""",
+            (sender_id, receiver_id, receiver_id, sender_id)
+        ).fetchone()
 
-        return redirect(url_for("dashboard"))
+        if friendship is None:
+            skipped.append(receiver_id)
+            continue
 
-    db.execute(
-        "INSERT INTO shared_files (file_id, sender_id, receiver_id) VALUES (?, ?, ?)",
-        (file["id"], sender_id, receiver_id)
-    )
+        # Prevent duplicate shares
+        existing = db.execute(
+            "SELECT id FROM shared_files WHERE file_id = ? AND sender_id = ? AND receiver_id = ?",
+            (file["id"], sender_id, receiver_id)
+        ).fetchone()
+
+        if existing:
+            skipped.append(receiver_id)
+            continue
+
+        db.execute(
+            "INSERT INTO shared_files (file_id, sender_id, receiver_id) VALUES (?, ?, ?)",
+            (file["id"], sender_id, receiver_id)
+        )
+        create_notification(receiver_id, f"{sender_id} shared a file with you", link=f"/download/{token}")
+        shared_with.append(receiver_id)
+
     db.commit()
 
-    create_notification(receiver_id, f"{sender_id} shared a file with you", link=f"/download/{token}")
+    if shared_with:
+        flash(f"File shared with: {', '.join(shared_with)}", "success")
+    if skipped:
+        flash(f"Could not share with: {', '.join(skipped)} (not friends or already shared)", "error")
 
-    flash("File shared", "success")
     return redirect(url_for("dashboard"))
 
 # File preview route
