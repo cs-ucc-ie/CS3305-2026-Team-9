@@ -206,7 +206,7 @@ variable is `SECRET_KEY`; cloud storage credentials are optional. An
 
 **Dylan Bennett** 
 
-**Lukan Prenderville** 
+**Luka Nergadze** 
 
 **Robin Bastible**
 
