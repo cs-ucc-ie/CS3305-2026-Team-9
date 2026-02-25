@@ -333,11 +333,14 @@
         </div>
         {% endfor %}
     </div>
-    {% if not files and request.args.get('q') %}
-        <p class="text-muted mt-2">No files matching "{{ request.args.get('q') }}". <a href="{{ url_for('dashboard') }}">Clear search</a></p>
-    {% else %}
-        <p class="text-muted mt-2">You haven't uploaded any files yet. <a href="{{ url_for('upload') }}">Upload your first file</a></p>
+    {% if not files %}
+        {% if request.args.get('q') %}
+            <p class="text-muted mt-2">No files matching "{{ request.args.get('q') }}". <a href="{{ url_for('dashboard') }}">Clear search</a></p>
+        {% else %}
+            <p class="text-muted mt-2">You haven't uploaded any files yet. <a href="{{ url_for('upload') }}">Upload your first file</a></p>
+        {% endif %}
     {% endif %}
+
 </div>
 
 <div class="card mt-3 shared-files-card">
