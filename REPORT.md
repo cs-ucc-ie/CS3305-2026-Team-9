@@ -2,7 +2,10 @@
 
 ## CS3305 Team Software Project -- Team 9
 
-
+**Jamie O Donovan**
+**Luka Nergadze**
+**Dylan Bennett** 
+**Robin Dowd** 
 ---
 
 ## 1. The Problem
@@ -35,13 +38,11 @@ legitimate concerns about where their data lives.
 **WeTransfer.** WeTransfer lets you share files via a link with no account
 required on the receiver's end, which is close to what we wanted. However, it
 offers no social features, no encryption beyond TLS in transit, and files are
-stored on WeTransfer's infrastructure. Firefox Send was an excellent
-privacy-focused alternative, but Mozilla shut it down in 2020 after abuse
-problems.
+stored on WeTransfer's infrastructure. 
 
 ## 3. Architecture Overview
 
-ShareLink has three layers that nest inside each other like Russian dolls:
+ShareLink has 3 layers that combine to create our product:
 
 1. **Flask backend** -- a Python web server that handles all business logic:
    authentication, file storage, sharing, chat, and administration.
@@ -63,8 +64,7 @@ or the project directory in development.
 
 ## 4. The Backend: Flask in Depth
 
-The Flask server is the heart of ShareLink. At roughly 1,400 lines, `app.py`
-contains over 20 route handlers grouped into several functional areas.
+The Flask server is the heart of ShareLink. With over 20 routes, that handle logic like uploading files and elements of the dashboard 
 
 ### Authentication
 
@@ -100,6 +100,12 @@ would mean implementing four functions in `storage.py` without touching
 `app.py`.
 
 ### End-to-End Encryption
+
+When a user enables encryption on upload, the file never leaves the browser in plaintext. The web crypto API generates a 256 bit AES-GCM key and a random 12 byte Initialization Vector per file. Each file is encrypted client side, the IV is prepended to the ciphertext and the result is uploaded to the server. The server only ever sees encrypted bytes
+
+The decryption key is distributed through the URL fragment. Browsers do not include fragments in HTTP requests, so the key never appears in server logs or network traffic. When recipient opens the link, `download_encrypted.html` extracts the key from the fragment, fetches the encrypted file from the server, splits off the 12 byte IV, decrypts with AES-GCM, and triggers a browser download of the plaintext file. The entire decrypt and download flow happens in Javascript without a page reload.
+
+As a fallback for cases where the fragment is lost, the key is also stored server side in the database. This means encryption protects files ar rest and in transit, but a server compromise could expose keys. A future improvement would be to remove the server side fallback entirely and rely solely on the fragment.
 
 
 
@@ -147,14 +153,13 @@ selection. Individual pages extend this base and fill in content blocks.
 ### Theming
 
 
+
+
 ## 7. The Desktop Shell: Electron and PyInstaller
 
 Packaging a Python web server as a desktop application is not straightforward.
 The user should not need Python installed, should not need to run terminal
 commands, and should not see a console window.
-
-### PyInstaller
-
 
 ### Electron
 
@@ -162,8 +167,7 @@ Electron wraps this binary in a native desktop application. `main.js` handles
 the lifecycle: it auto-generates a `.env` file with a random `SECRET_KEY` on
 first launch, spawns the PyInstaller binary, polls port 5050 until Flask
 responds, then opens a BrowserWindow. On quit, Electron sends SIGTERM on
-macOS/Linux or uses `taskkill` on Windows. We chose port 5050 because macOS
-reserves port 5000 for AirPlay Receiver. The final `.app` bundle is around
+macOS/Linux or uses `taskkill` on Windows. The final `.app` bundle is around
 340 MB (Electron framework plus PyInstaller binary plus static assets).
 
 ## 8. Administration
@@ -194,15 +198,17 @@ Environment configuration is handled through a `.env` file. The only required
 variable is `SECRET_KEY`; cloud storage credentials are optional. An
 `.env.example` template is provided in the repository.
 
-## 10. Challenges and Lessons Learned
 
+## 10. Use of Generative AI
 
-## 11. Use of Generative AI
+We used Claude Code as a development aid. It's primary role was debugging, identifying and fixing issues such as XSS vulnerabilities in the notification dropdown, missing CSRF tokens and path resolution problems. All AI generated code was reviewed and tested by team members before being merged.
 
-
-## 12. Contributions
+## 11. Contributions
 
 **Dylan Bennett** 
+I built a lot of the core features of the application. THe initial file upload and download routes and SQLite database schema. From there I added features incrementally, link expiration with selectable durations, user dashboard and file management.
+
+I added cloud storage support through Cloudflare R2, using a bucket that automatically stores files uploaded to save disk space locally. I also implemented the Electron wrapper. This enables the application to be run locally on desktop. I also deployed the web version to PythonAnywhere so it runs on a web server.
 
 **Luka Nergadze** 
 The first first thing i done was ensuring that only registered users could use the platform. I build the registration and login system using Flask-WTF for form handling and validation. Dylan further improved this. 
@@ -215,9 +221,10 @@ I also added a settings page accessible by the dashboard. The feature i added to
 
 I also added a notification system that notifies the users of messages, friend request, and so on. A `notification` table was added to the database to send notifications with message content, a link, read status, and a timestamp. Two API endpoints were created. One to fetch notifications for the current user and one to mark them all as read. On the frontend I added a notification bell with an unread badge to the dashboard, opening a dropdown of notifications on click. A JavaScript polling loop runs to check for new notifications and update the badge count, with a toast pop-up appearing immediately when something new arrives.
 
-**Robin Bastible**
+**Jamie O Donovan**
 
-**Jamie O'Donovan** 
+**Robin Dowd** 
+
 
 
 *ShareLink is open source and available at
