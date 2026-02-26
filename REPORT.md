@@ -2,8 +2,6 @@
 
 ## CS3305 Team Software Project -- Team 9
 
-Dylan Bennett (123346983), Lukan Nergadze (122421516),
-Robin Bastible, Jamie O'Donovan
 
 ---
 
