@@ -65,7 +65,11 @@ function loadFriendsList() {
                 const badge = f.unread_count > 0
                     ? '<div class="chat-friend-unread">' + f.unread_count + '</div>'
                     : '';
+                const avatar = f.profile_picture
+                    ? '<img src="/static/profiles/' + escapeAttr(f.profile_picture) + '" class="chat-friend-avatar">'
+                    : '<div class="chat-friend-avatar chat-friend-avatar-placeholder">' + escapeHtml(f.user_id.charAt(0).toUpperCase()) + '</div>';
                 html += '<div class="chat-friend-item" onclick="openConversation(\'' + escapeAttr(f.user_id) + '\')">'
+                    + avatar
                     + '<div>'
                     + '<div class="chat-friend-name">' + escapeHtml(f.user_id) + '</div>'
                     + '<div class="chat-friend-preview">' + preview + '</div>'

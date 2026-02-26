@@ -2907,7 +2907,31 @@ form * {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   transition: background 0.1s;
+}
+
+.chat-friend-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.chat-friend-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
 }
 
 .chat-friend-item:hover {

@@ -538,7 +538,9 @@ def dashboard():
     
     # Incoming friend requests
     incoming_requests = db.execute(
-        "SELECT * FROM friends WHERE friend_id = ? AND status = 'pending'",
+        """SELECT f.*, u.profile_picture FROM friends f
+           JOIN users u ON u.user_id = f.user_id
+           WHERE f.friend_id = ? AND f.status = 'pending'""",
         (user_id,)
     ).fetchall()
 
@@ -1185,11 +1187,17 @@ def chat_friends():
             elif last_msg['file_id']:
                 preview = '📎 Shared a file'
 
+        friend_row = db.execute(
+            "SELECT profile_picture FROM users WHERE user_id = ?",
+            (friend_id,)
+        ).fetchone()
+
         friends.append({
             'user_id': friend_id,
             'unread_count': unread,
             'last_message': preview,
-            'last_message_time': last_msg['timestamp'] if last_msg else None
+            'last_message_time': last_msg['timestamp'] if last_msg else None,
+            'profile_picture': friend_row['profile_picture'] if friend_row and friend_row['profile_picture'] else None
         })
 
     friends.sort(key=lambda x: x['last_message_time'] or '', reverse=True)

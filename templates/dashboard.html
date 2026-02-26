@@ -56,6 +56,11 @@
                 {% for req in incoming_requests %}
                     <div class="request-card">
                         <div class="request-info">
+                            {% if req.profile_picture %}
+                                <img src="{{ url_for('static', filename='profiles/' ~ req.profile_picture) }}" class="header-avatar" style="margin-right:6px;vertical-align:middle;">
+                            {% else %}
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--primary);color:white;font-weight:bold;font-size:14px;margin-right:6px;vertical-align:middle;">{{ req.user_id[0] | upper }}</span>
+                            {% endif %}
                             <strong>{{ req.user_id }}</strong> wants to be your friend
                         </div>
                         <div class="request-actions">

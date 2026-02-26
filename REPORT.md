@@ -2,7 +2,8 @@
 
 ## CS3305 Team Software Project -- Team 9
 
-
+Dylan Bennett (123346983), Lukan Nergadze (122421516),
+Robin Bastible, Jamie O'Donovan
 
 ---
 
@@ -205,7 +206,16 @@ variable is `SECRET_KEY`; cloud storage credentials are optional. An
 
 **Dylan Bennett** 
 
-**Lukan Prenderville** 
+**Luka Nergadze** 
+The first first thing i done was ensuring that only registered users could use the platform. I build the registration and login system using Flask-WTF for form handling and validation. Dylan further improved this. 
+
+To allow social features on the platform I implemented a friend system. This required extending the database with a `friends` table that tracks relationships between users using a status field to represent pending and accepted requests. I added routes in `app.py` to cover the full lifecycle of a friendship - sending requests, accepting, declining, and unfriending. The send request route handles edge cases including non-existent users, self-requests, and duplicate requests. The dashboard was updated both on the backend, to query and pass friend data to the template, and on the frontend in `dashboard.html`, where sections were added for friend lists, incoming requests, and outgoing pending requests
+
+To improve the usability of dashboard for files. I added file search and sorting functionality. Search is handled using SQL `LIKE` queries filtered by the user's input. The sorting is done by conditionally changing the `ORDER BY` clause based on the dropdown selection with options for newest, oldest, largest, and most downloaded. 
+
+I also added a settings page accessible by the dashboard. The feature i added to settings is to add a profile picture. Images are saved to `static/profiles` directory, the filename is stored in a column in the `users` table, and the picture is loaded on every request by a `before_request` hook so it appears next to the username across the entre site. I also added profile picture to the chat. The `/api/chat/friends` API endpoint was updated to join users table and include each friend's profile picture in the JSON response. The same approach was applied to the incoming friend request on the dashboard.
+
+I also added a notification system that notifies the users of messages, friend request, and so on. A `notification` table was added to the database to send notifications with message content, a link, read status, and a timestamp. Two API endpoints were created. One to fetch notifications for the current user and one to mark them all as read. On the frontend I added a notification bell with an unread badge to the dashboard, opening a dropdown of notifications on click. A JavaScript polling loop runs to check for new notifications and update the badge count, with a toast pop-up appearing immediately when something new arrives.
 
 **Robin Bastible**
 
