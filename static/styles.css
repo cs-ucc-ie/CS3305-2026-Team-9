@@ -2224,21 +2224,38 @@ form * {
 }
 
 .menu-share-section {
-  padding: 8px 16px;
+  padding: 6px 12px;
 }
 
 .menu-label {
   display: block;
   font-size: 12px;
   color: var(--muted);
-  margin-bottom: 8px;
+  margin: 0 0 4px;
   font-weight: 500;
 }
 
 .menu-share-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  margin: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  max-width: none;
+}
+
+.menu-share-section .share-friend-list {
+  max-height: 128px;
+  margin: 2px 0 6px;
+  padding: 2px 0;
+}
+
+.menu-share-section .share-friend-option {
+  padding: 4px 8px;
 }
 
 .menu-select {

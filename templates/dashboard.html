@@ -478,8 +478,13 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// Close menus on scroll
-window.addEventListener('scroll', closeAllMenus, true);
+// Close menus on page scroll, but keep them open when scrolling inside the dropdown itself
+window.addEventListener('scroll', function(event) {
+    if (event.target && event.target.closest && event.target.closest('.menu-dropdown')) {
+        return;
+    }
+    closeAllMenus();
+}, true);
 
 // Close menus on window resize
 window.addEventListener('resize', closeAllMenus);
