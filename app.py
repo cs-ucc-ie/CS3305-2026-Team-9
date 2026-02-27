@@ -553,10 +553,17 @@ def dashboard():
     # Accepted friends
     friends = db.execute(
         """
-        SELECT * FROM friends
-        WHERE (user_id = ? OR friend_id = ?) AND status = 'accepted'
+        SELECT f.*, 
+               CASE 
+                   WHEN f.user_id = ? THEN u_friend.profile_picture
+                   ELSE u_user.profile_picture
+               END AS friend_profile_picture
+        FROM friends f
+        LEFT JOIN users u_user ON u_user.user_id = f.user_id
+        LEFT JOIN users u_friend ON u_friend.user_id = f.friend_id
+        WHERE (f.user_id = ? OR f.friend_id = ?) AND f.status = 'accepted'
         """,
-        (user_id, user_id)
+        (user_id, user_id, user_id)
     ).fetchall()
 
     # Files shared with me

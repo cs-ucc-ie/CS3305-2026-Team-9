@@ -89,7 +89,12 @@
             {% for f in friends %}
                 {% set friend = f.friend_id if f.user_id == g.user else f.user_id %}
                 <li>
-                    {{ friend }}
+                    {% if f.friend_profile_picture %}
+                        <img src="{{ url_for('static', filename='profiles/' ~ f.friend_profile_picture) }}" class="header-avatar" style="margin-right:6px;vertical-align:middle;">
+                    {% else %}
+                        <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--primary);color:white;font-weight:bold;font-size:14px;margin-right:6px;vertical-align:middle;">{{ friend[0] | upper }}</span>
+                    {% endif %}
+                    <span>{{ friend }}</span>
                     <form method="POST" action="{{ url_for('unfriend', friend_id=friend) }}" class="form-inline unfriend-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-danger btn-sm">Unfriend</button>
