@@ -11,13 +11,13 @@
         {% endfor %}
         <br />
         {{ form.password.label }}
-        {{ form.password() }}
+        {{ form.password(autocomplete="new-password") }}
         {% for error in form.password.errors %}
             <div class="form-error">{{ error }}</div>
         {% endfor %}
         <br />
         {{ form.password2.label }}
-        {{ form.password2() }}
+        {{ form.password2(autocomplete="new-password") }}
         {% for error in form.password2.errors %}
             <div class="form-error">{{ error }}</div>
         {% endfor %}
