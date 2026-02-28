@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Method Not Allowed - ShareLink{% endblock %}
+
+{% block main_content %}
+<div class="card card-narrow center">
+    <h1>405 - Method Not Allowed</h1>
+    <p>The request method is not allowed for this page.</p>
+    <p class="mt-2">
+        <a href="{{ url_for('index') }}" class="btn">Go Home</a>
+        {% if g.user %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Dashboard</a>
+        {% endif %}
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - ShareLink{% endblock %}
+
+{% block main_content %}
+<div class="card card-narrow center">
+    <h1>404 - Page Not Found</h1>
+    <p>The page you are looking for does not exist or may have been moved.</p>
+    <p class="mt-2">
+        <a href="{{ url_for('index') }}" class="btn">Go Home</a>
+        {% if g.user %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Dashboard</a>
+        {% endif %}
+    </p>
+</div>
+{% endblock %}
