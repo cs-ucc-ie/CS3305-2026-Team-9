@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Server Error - ShareLink{% endblock %}
+
+{% block main_content %}
+<div class="card card-narrow center">
+    <h1>500 - Server Error</h1>
+    <p>Something went wrong on our side. Please try again in a moment.</p>
+    <p class="mt-2">
+        <a href="{{ url_for('index') }}" class="btn">Go Home</a>
+        {% if g.user %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Dashboard</a>
+        {% endif %}
+    </p>
+</div>
+{% endblock %}

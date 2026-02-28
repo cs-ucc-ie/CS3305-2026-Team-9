@@ -1420,6 +1420,41 @@ def mark_notifications_read():
     return jsonify({"success": True})
 
 
+@app.errorhandler(403)
+def forbidden_error(error):
+    return render_template('403.html'), 403
+
+
+@app.errorhandler(400)
+def bad_request_error(error):
+    return render_template('400.html'), 400
+
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(405)
+def method_not_allowed_error(error):
+    return render_template('405.html'), 405
+
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return render_template('413.html'), 413
+
+
+@app.errorhandler(418)
+def teapot_error(error):
+    return render_template('418.html'), 418
+
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    return render_template('500.html'), 500
+
+
 
 if __name__ == '__main__':
     # Clean up expired files on startup

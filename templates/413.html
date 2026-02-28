@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}File Too Large - ShareLink{% endblock %}
+
+{% block main_content %}
+<div class="card card-narrow center">
+    <h1>413 - File Too Large</h1>
+    <p>The uploaded file exceeds the maximum allowed size of 100MB.</p>
+    <p class="mt-2">
+        <a href="{{ url_for('upload') }}" class="btn">Back to Upload</a>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Home</a>
+    </p>
+</div>
+{% endblock %}
