@@ -12,9 +12,17 @@
         <p><strong>Size:</strong> {{ "%.2f"|format(file_info.file_size / 1024 / 1024) }} MB</p>
     </div>
 
-    <div id="statusContainer">
+    <!-- Password form -->
+    <div id="passwordForm">
+        <label for="decryptPassword"><strong>Enter password to decrypt:</strong></label>
+        <input type="password" id="decryptPassword" placeholder="Password" class="mt-1">
+        <button class="btn mt-2" onclick="decryptAndDownload()">Decrypt & Download</button>
+    </div>
+
+    <!-- Progress (hidden until decryption starts) -->
+    <div id="statusContainer" class="hidden">
         <div id="decryptStatus" class="decrypt-status">
-            <p id="statusText" class="decrypt-status-text"><span class="spinner"></span> Preparing decryption...</p>
+            <p id="statusText" class="decrypt-status-text"><span class="spinner"></span> Preparing...</p>
             <div class="progress-track">
                 <div id="decryptProgress" class="progress-bar progress-bar-success"></div>
             </div>
@@ -34,76 +42,72 @@
 
 {% block scripts %}
 <script>
-function base64urlToArrayBuffer(base64url) {
-    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
-    const binary = atob(padded);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes.buffer;
-}
-
 async function decryptAndDownload() {
+    const password = document.getElementById('decryptPassword').value;
+    if (!password) {
+        alert('Please enter the password.');
+        return;
+    }
+
     const statusText = document.getElementById('statusText');
     const progress = document.getElementById('decryptProgress');
     const errorContainer = document.getElementById('errorContainer');
     const errorText = document.getElementById('errorText');
 
+    document.getElementById('passwordForm').classList.add('hidden');
+    document.getElementById('statusContainer').classList.remove('hidden');
+    errorContainer.classList.add('hidden');
+
     try {
-        // 1. Get key from URL fragment, sessionStorage, or server
-        let keyB64 = window.location.hash.substring(1);
-        if (!keyB64) {
-            keyB64 = sessionStorage.getItem('e2e_key_{{ token }}');
-        }
-        if (!keyB64) {
-            keyB64 = sessionStorage.getItem('e2e_key');
-        }
-        if (!keyB64) {
-            keyB64 = '{{ encryption_key }}';
-        }
-        if (!keyB64) {
-            throw new Error('No decryption key found. Make sure you have the complete link including the # fragment.');
-        }
-
-        statusText.textContent = 'Importing decryption key...';
-        progress.style.width = '10%';
-
-        // 2. Import key
-        const keyBytes = base64urlToArrayBuffer(keyB64);
-        const key = await crypto.subtle.importKey(
-            'raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt']
-        );
-
-        statusText.textContent = 'Downloading encrypted file...';
+        statusText.innerHTML = '<span class="spinner"></span> Downloading encrypted file...';
         progress.style.width = '20%';
 
-        // 3. Fetch encrypted file
+        // 1. Fetch encrypted file
         const response = await fetch('/serve/{{ token }}');
-        if (!response.ok) {
-            throw new Error('Failed to fetch encrypted file from server.');
-        }
+        if (!response.ok) throw new Error('Failed to fetch file from server.');
         const encryptedData = await response.arrayBuffer();
 
-        statusText.textContent = 'Decrypting file...';
-        progress.style.width = '60%';
+        statusText.innerHTML = '<span class="spinner"></span> Deriving key...';
+        progress.style.width = '40%';
 
-        // 4. Split IV (first 12 bytes) and ciphertext
-        const iv = new Uint8Array(encryptedData.slice(0, 12));
-        const ciphertext = encryptedData.slice(12);
+        // 2. Parse file header: [16 bytes salt | 12 bytes IV | ciphertext]
+        //    This matches the layout written in upload.html's encryptFile()
+        const salt = new Uint8Array(encryptedData.slice(0, 16));
+        const iv = new Uint8Array(encryptedData.slice(16, 28));
+        const ciphertext = encryptedData.slice(28);
 
-        // 5. Decrypt
-        const decrypted = await crypto.subtle.decrypt(
-            { name: 'AES-GCM', iv: iv },
-            key,
-            ciphertext
+        // 3. Derive AES-GCM key from password + embedded salt using PBKDF2
+        //    Parameters must match upload.html exactly: 100000 iterations, SHA-256, 256-bit key
+        const keyMaterial = await crypto.subtle.importKey(
+            'raw',
+            new TextEncoder().encode(password),
+            { name: 'PBKDF2' },
+            false,
+            ['deriveKey']
         );
+        const key = await crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt: salt, iterations: 100000, hash: 'SHA-256' },
+            keyMaterial,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['decrypt']
+        );
+
+        statusText.innerHTML = '<span class="spinner"></span> Decrypting...';
+        progress.style.width = '70%';
+
+        // 4. Decrypt — AES-GCM will throw if password is wrong (authentication tag mismatch)
+        let decrypted;
+        try {
+            decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ciphertext);
+        } catch (e) {
+            throw new Error('Incorrect password or corrupted file.');
+        }
 
         statusText.textContent = 'Starting download...';
         progress.style.width = '90%';
 
-        // 6. Trigger download
+        // 5. Trigger download
         const blob = new Blob([decrypted]);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -118,13 +122,16 @@ async function decryptAndDownload() {
         progress.style.width = '100%';
 
     } catch (err) {
-        document.getElementById('statusContainer').style.display = 'none';
+        document.getElementById('statusContainer').classList.add('hidden');
+        document.getElementById('passwordForm').classList.remove('hidden');
         errorContainer.classList.remove('hidden');
-        errorText.textContent = err.message || 'Decryption failed. The link may be incomplete or corrupted.';
+        errorText.textContent = err.message || 'Decryption failed.';
     }
 }
 
-// Start decryption when page loads
-decryptAndDownload();
+// Allow Enter key to trigger decrypt
+document.getElementById('decryptPassword').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') decryptAndDownload();
+});
 </script>
 {% endblock %}

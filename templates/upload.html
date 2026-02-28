@@ -58,14 +58,7 @@
 
             <label for="password" class="mt-2"><strong>Password Protection (Optional):</strong></label>
             <input type="password" name="password" id="password" placeholder="Leave blank for no password">
-            <p class="text-sm text-muted">Set a password to protect this file. Anyone downloading will need to enter it.</p>
-
-            <div class="mt-2" style="display:flex;align-items:center;gap:8px;">
-                <input type="checkbox" id="encryptToggle" name="encrypt_toggle" style="width:auto;">
-                <label for="encryptToggle" style="margin:0;font-weight:normal;">Enable End-to-End Encryption (AES-256-GCM)</label>
-            </div>
-            <p class="text-sm text-muted">When enabled, your file is encrypted in the browser before upload. Only people with the full link can decrypt it.</p>
-
+            <p class="text-sm text-muted">Set a password to protect this file. The file will be encrypted for added security. Anyone downloading will need to enter it.</p>
             <button type="submit" class="btn mt-3">Upload File</button>
         </form>
 
@@ -157,7 +150,7 @@ function arrayBufferToBase64url(buffer) {
     return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-async function encryptFile(file, key) {
+async function encryptFile(file, key, salt) {
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const fileData = await file.arrayBuffer();
     const encrypted = await crypto.subtle.encrypt(
@@ -165,10 +158,11 @@ async function encryptFile(file, key) {
         key,
         fileData
     );
-    // Prepend IV to ciphertext
-    const combined = new Uint8Array(iv.length + encrypted.byteLength);
-    combined.set(iv, 0);
-    combined.set(new Uint8Array(encrypted), iv.length);
+    // Layout: [16 bytes salt | 12 bytes IV | ciphertext]
+    const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+    combined.set(salt, 0);
+    combined.set(iv, salt.length);
+    combined.set(new Uint8Array(encrypted), salt.length + iv.length);
     return new Blob([combined]);
 }
 
@@ -181,7 +175,7 @@ document.querySelector('.upload-form').addEventListener('submit', async function
         return;
     }
 
-    const useEncryption = document.getElementById('encryptToggle').checked;
+    const useEncryption = document.getElementById('password').value.length > 0;
     const progressContainer = document.getElementById('progressContainer');
     const uploadForm = document.getElementById('uploadForm');
     const progressBar = document.getElementById('progressBar');
@@ -205,25 +199,32 @@ document.querySelector('.upload-form').addEventListener('submit', async function
             document.querySelector('#progressContainer h3').textContent = 'Encrypting Files...';
 
             // Generate encryption key
-            const key = await crypto.subtle.generateKey(
+            const password = document.getElementById('password').value;
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw',
+                new TextEncoder().encode(password),
+                { name: 'PBKDF2' },
+                false,
+                ['deriveKey']
+            );
+
+            const key = await crypto.subtle.deriveKey(
+                { name: 'PBKDF2', salt: salt, iterations: 100000, hash: 'SHA-256' },
+                keyMaterial,
                 { name: 'AES-GCM', length: 256 },
-                true,
+                false,
                 ['encrypt']
             );
-            const rawKey = await crypto.subtle.exportKey('raw', key);
-            keyB64 = arrayBufferToBase64url(rawKey);
 
             // Encrypt each file
             for (let i = 0; i < files.length; i++) {
-                const encryptedBlob = await encryptFile(files[i], key);
+                const encryptedBlob = await encryptFile(files[i], key, salt);
                 formData.append('files', encryptedBlob, files[i].name);
             }
 
             formData.append('is_encrypted', '1');
-            formData.append('encryption_key', keyB64);
-
-            // Store key in sessionStorage as backup
-            sessionStorage.setItem('e2e_key', keyB64);
 
             document.querySelector('#progressContainer h3').textContent = 'Uploading Encrypted Files...';
         } else {

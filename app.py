@@ -411,13 +411,12 @@ def upload():
         
         # Check if file was encrypted client-side
         is_encrypted = request.form.get('is_encrypted', '0') == '1'
-        encryption_key = request.form.get('encryption_key') if is_encrypted else None
 
         # Save to database
         db = get_db()
         db.execute(
-            'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, checksum, salt, password_hash, is_encrypted, encryption_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            (saved_filename, original_filename, file_size, token, user_id, expiry_date, checksum, salt, password_hash, is_encrypted, encryption_key)
+            'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, checksum, salt, password_hash, is_encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            (saved_filename, original_filename, file_size, token, user_id, expiry_date, checksum, salt, password_hash, is_encrypted)
         )
         db.commit()
 
@@ -493,7 +492,7 @@ def download(token):
 
     # For encrypted files, render client-side decryption page
     if file_info['is_encrypted']:
-        return render_template('download_encrypted.html', file_info=file_info, token=token, encryption_key=file_info['encryption_key'] or '')
+        return render_template('download_encrypted.html', file_info=file_info, token=token)
 
     # Send the file directly for non-encrypted files
     return get_file_response(
