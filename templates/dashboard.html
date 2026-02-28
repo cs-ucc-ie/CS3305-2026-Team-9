@@ -43,7 +43,7 @@
         <h2>Add a Friend</h2>
         <form class="form-inline" method="POST" action="{{ url_for('add_friend') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="text" name="friend_id" placeholder="Enter friend's username">
+            <input type="text" name="friend_id" placeholder="Enter friend's username" autocomplete="off">
             <button type="submit" class="btn btn-sm">Add Friend</button>
         </form>
     </div>
