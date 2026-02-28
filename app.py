@@ -457,22 +457,6 @@ def download(token):
 
         return redirect(url_for('dashboard'))
     
-    # Check if password protected
-    if file_info['password_hash']:
-        # If GET request, show password form
-        if request.method == 'GET':
-    
-            return render_template('password_check.html', token=token)
-        
-        # If POST request, check password
-        if request.method == 'POST':
-            entered_password = request.form.get('password', '')
-            salt = file_info['salt'] or ''
-            if not check_password_hash(file_info['password_hash'], entered_password + salt):
-                flash('Incorrect password', 'error')
-        
-                return render_template('password_check.html', token=token)
-            # Password correct, continue to download
     
     # Verify file integrity before allowing download
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], file_info['filename'])
