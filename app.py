@@ -1173,8 +1173,7 @@ def preview(token):
     return render_template('preview.html', file_info=file_info, token=token,
                           is_image=is_image, is_pdf=is_pdf,
                           is_video=is_video, is_audio=is_audio,
-                          file_ext=file_ext,
-                          encryption_key=file_info['encryption_key'] or '')
+                          file_ext=file_ext)
 
 
 # Serve file for preview (images/PDFs)

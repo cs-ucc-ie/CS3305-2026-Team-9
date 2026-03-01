@@ -23,8 +23,14 @@
     <hr class="divider">
 
     {% if file_info.is_encrypted %}
-        <!-- Encrypted file preview: decrypt client-side then display -->
-        <div id="previewContainer" class="preview-media">
+        <!-- Encrypted file preview: enter password, decrypt client-side, then display -->
+        <div id="passwordForm">
+            <label for="previewPassword"><strong>Enter password to decrypt and preview:</strong></label>
+            <input type="password" id="previewPassword" placeholder="Password" class="mt-1" autocomplete="off">
+            <button class="btn mt-2" onclick="decryptAndPreview()">Decrypt & Preview</button>
+        </div>
+
+        <div id="previewContainer" class="preview-media hidden">
             <p id="previewStatus" class="decrypt-status-text decrypt-status-padded"><span class="spinner"></span> Decrypting file for preview...</p>
         </div>
         <div id="previewError" class="error-container hidden">
@@ -32,42 +38,55 @@
         </div>
 
         <script>
-        function base64urlToArrayBuffer(base64url) {
-            const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-            const padded = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
-            const binary = atob(padded);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) {
-                bytes[i] = binary.charCodeAt(i);
-            }
-            return bytes.buffer;
-        }
+        document.getElementById('previewPassword').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') decryptAndPreview();
+        });
 
         async function decryptAndPreview() {
+            const password = document.getElementById('previewPassword').value;
+            if (!password) { alert('Please enter the password.'); return; }
+
             const container = document.getElementById('previewContainer');
             const status = document.getElementById('previewStatus');
             const errorDiv = document.getElementById('previewError');
             const errorText = document.getElementById('previewErrorText');
 
+            document.getElementById('passwordForm').classList.add('hidden');
+            container.classList.remove('hidden');
+            errorDiv.classList.add('hidden');
+
             try {
-                let keyB64 = window.location.hash.substring(1);
-                if (!keyB64) keyB64 = sessionStorage.getItem('e2e_key_{{ token }}');
-                if (!keyB64) keyB64 = sessionStorage.getItem('e2e_key');
-                if (!keyB64) keyB64 = '{{ encryption_key }}';
-                if (!keyB64) throw new Error('No decryption key found. Use the complete link with the # fragment.');
-
-                const keyBytes = base64urlToArrayBuffer(keyB64);
-                const key = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt']);
-
-                status.textContent = 'Downloading encrypted file...';
+                status.innerHTML = '<span class="spinner"></span> Downloading encrypted file...';
                 const response = await fetch('/serve/{{ token }}');
                 if (!response.ok) throw new Error('Failed to fetch file.');
                 const encryptedData = await response.arrayBuffer();
 
-                status.textContent = 'Decrypting...';
-                const iv = new Uint8Array(encryptedData.slice(0, 12));
-                const ciphertext = encryptedData.slice(12);
-                const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ciphertext);
+                status.innerHTML = '<span class="spinner"></span> Deriving key...';
+
+                // Parse header: [16 bytes salt | 12 bytes IV | ciphertext]
+                const salt = new Uint8Array(encryptedData.slice(0, 16));
+                const iv = new Uint8Array(encryptedData.slice(16, 28));
+                const ciphertext = encryptedData.slice(28);
+
+                // Derive key with PBKDF2 (must match upload.html parameters)
+                const keyMaterial = await crypto.subtle.importKey(
+                    'raw', new TextEncoder().encode(password),
+                    { name: 'PBKDF2' }, false, ['deriveKey']
+                );
+                const key = await crypto.subtle.deriveKey(
+                    { name: 'PBKDF2', salt: salt, iterations: 100000, hash: 'SHA-256' },
+                    keyMaterial,
+                    { name: 'AES-GCM', length: 256 }, false, ['decrypt']
+                );
+
+                status.innerHTML = '<span class="spinner"></span> Decrypting...';
+
+                let decrypted;
+                try {
+                    decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ciphertext);
+                } catch (e) {
+                    throw new Error('Incorrect password or corrupted file.');
+                }
 
                 status.style.display = 'none';
 
@@ -110,13 +129,12 @@
                 {% endif %}
 
             } catch (err) {
-                container.style.display = 'none';
+                container.classList.add('hidden');
+                document.getElementById('passwordForm').classList.remove('hidden');
                 errorDiv.classList.remove('hidden');
                 errorText.textContent = err.message || 'Decryption failed.';
             }
         }
-
-        decryptAndPreview();
         </script>
 
     {% elif is_image %}
