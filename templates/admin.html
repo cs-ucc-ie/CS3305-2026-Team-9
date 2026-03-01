@@ -113,7 +113,7 @@
                 <tr>
                     <td>
                         {% if user.profile_picture %}
-                            <img src="{{ url_for('static', filename='profiles/' ~ user.profile_picture) }}"
+                            <img src="{{ url_for('serve_profile_picture', filename=user.profile_picture) }}"
                                  class="header-avatar" style="width:24px;height:24px;vertical-align:middle;margin-right:6px;">
                         {% endif %}
                         <strong>{{ user.user_id }}</strong>

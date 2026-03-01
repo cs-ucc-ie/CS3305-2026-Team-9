@@ -66,7 +66,7 @@ function loadFriendsList() {
                     ? '<div class="chat-friend-unread">' + f.unread_count + '</div>'
                     : '';
                 const avatar = f.profile_picture
-                    ? '<img src="/static/profiles/' + escapeAttr(f.profile_picture) + '" class="chat-friend-avatar">'
+                    ? '<img src="/profiles/' + escapeAttr(f.profile_picture) + '" class="chat-friend-avatar">'
                     : '<div class="chat-friend-avatar chat-friend-avatar-placeholder">' + escapeHtml(f.user_id.charAt(0).toUpperCase()) + '</div>';
                 html += '<div class="chat-friend-item" onclick="openConversation(\'' + escapeAttr(f.user_id) + '\')">'
                     + avatar

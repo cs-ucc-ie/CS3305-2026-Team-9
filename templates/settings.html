@@ -18,7 +18,7 @@
     <h2>Profile Picture</h2>
 
     {% if user_profile_picture %}
-        <img src="{{ url_for('static', filename='profiles/' ~ user_profile_picture) }}"
+        <img src="{{ url_for('serve_profile_picture', filename=user_profile_picture) }}"
              class="settings-profile-pic">
     {% endif %}
 

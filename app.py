@@ -3,9 +3,15 @@ import re
 import secrets
 import time
 from collections import defaultdict
+from dotenv import load_dotenv
+from app_paths import get_user_data_dir
+
+# Load .env BEFORE importing storage so USE_CLOUD_STORAGE is set correctly
+USER_DATA = get_user_data_dir()
+load_dotenv(os.path.join(USER_DATA, '.env'))
+
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, send_file, session, g, jsonify
 from werkzeug.utils import secure_filename
-from dotenv import load_dotenv
 from database import get_db, close_db, init_db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_wtf.csrf import CSRFProtect
@@ -18,22 +24,31 @@ import base64
 import zipfile
 from storage import save_file, save_zip, get_file_response, delete_file as storage_delete_file
 import hashlib
-from app_paths import get_user_data_dir
-
-USER_DATA = get_user_data_dir()
 
 # Simple in-memory rate limiter for login attempts
 login_attempts = defaultdict(list)  # IP -> list of timestamps
 MAX_LOGIN_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 300  # 5 minutes
 
-# Load environment variables
-load_dotenv(os.path.join(USER_DATA, '.env'))
-
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY') or secrets.token_hex(32)
 app.config['WTF_CSRF_ENABLED'] = True
 csrf = CSRFProtect(app)
+
+# Track last cleanup time so expired files are cleaned up even under WSGI
+_last_cleanup_time = 0
+
+@app.before_request
+def periodic_cleanup():
+    global _last_cleanup_time
+    now = time.time()
+    # Run cleanup at most once per hour
+    if now - _last_cleanup_time > 3600:
+        _last_cleanup_time = now
+        try:
+            cleanup_expired_files()
+        except Exception:
+            pass
 
 @app.before_request
 def logged_in_user():
@@ -198,6 +213,12 @@ def upload_profile_picture():
     return redirect(url_for("settings"))
 
 
+@app.route('/profiles/<filename>')
+def serve_profile_picture(filename):
+    """Serve profile pictures from USER_DATA so they work in PyInstaller mode."""
+    profiles_dir = os.path.join(USER_DATA, "static", "profiles")
+    return send_from_directory(profiles_dir, filename)
+
 
 # Configuration — use absolute paths for PythonAnywhere compatibility
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -283,6 +304,25 @@ def compute_checksum(file_obj, chunk_size=8192):
     file_obj.seek(0)
     return h.hexdigest()
 
+
+def verify_file_checksum(filename, expected_checksum):
+    """Verify a file's checksum, supporting both local and cloud storage.
+    Returns True if valid, False if corrupted, raises Exception on error."""
+    use_cloud = os.getenv('USE_CLOUD_STORAGE', 'false').lower() == 'true'
+    if use_cloud:
+        from storage import _get_s3_client, _get_bucket
+        client = _get_s3_client()
+        bucket = _get_bucket()
+        obj = client.get_object(Bucket=bucket, Key=filename)
+        data = obj['Body'].read()
+        file_checksum = hashlib.sha256(data).hexdigest()
+    else:
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        with open(filepath, 'rb') as f:
+            file_checksum = compute_checksum(f)
+    return file_checksum == expected_checksum
+
+
 # Homepage route
 @app.route('/')
 def index():
@@ -338,90 +378,114 @@ def index():
 @login_required
 def upload():
     if request.method == 'POST':
-        # Check if files were uploaded
-        if 'files' not in request.files:
-            flash('No files selected', 'error')
-            return redirect(request.url)
-        
-        files = request.files.getlist('files')
-        
-        # Check if any files were actually selected
-        if not files or files[0].filename == '':
-            flash('No files selected', 'error')
-            return redirect(request.url)
-        
-        # Generate unique token
-        token = generate_token()
-        user_id = session.get('user_id')
-        
-        # Get expiration time and password
-        ALLOWED_EXPIRY_HOURS = {24, 168, 720}
+        is_xhr = request.headers.get('X-CSRFToken') is not None
+
         try:
-            expiry_hours = int(request.form.get('expiry', 24))
-        except (ValueError, TypeError):
-            expiry_hours = 24
-        if expiry_hours not in ALLOWED_EXPIRY_HOURS:
-            expiry_hours = 24
-        expiry_date = datetime.now() + timedelta(hours=expiry_hours)
-        password = request.form.get('password', '').strip()
-        salt = None
-        password_hash = None
-        if password:
-            salt = base64.b64encode(os.urandom(32)).decode('utf-8')
-            password_hash = generate_password_hash(password + salt)
-        
-        # If single file, save normally
-        if len(files) == 1:
-            file = files[0]
-
-            # Check if file type is allowed
-            if not allowed_file(file.filename) or not allowed_mime_type(file.mimetype):
-                flash('File type not allowed', 'error')
+            # Check if files were uploaded
+            if 'files' not in request.files:
+                if is_xhr:
+                    return jsonify({'success': False, 'error': 'No files selected'}), 400
+                flash('No files selected', 'error')
                 return redirect(request.url)
-            
-            original_filename = secure_filename(file.filename)
-            saved_filename = f"{token}_{original_filename}"
 
-            # compute checksum before saving (function resets file pointer)
-            checksum = compute_checksum(file)
-            file_size = save_file(file, saved_filename, app.config['UPLOAD_FOLDER'])
-        
-        # If multiple files, create a zip
-        else:
-            # Create zip filename
-            original_filename = f"files_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
-            saved_filename = f"{token}_{original_filename}"
+            files = request.files.getlist('files')
 
-            # Collect files for zipping
-            zip_entries = []
-            for file in files:
-                if file and file.filename:
-                    if not allowed_file(file.filename):
-                        flash(f'File type not allowed: {file.filename}', 'error')
-                        continue
-                    filename = secure_filename(file.filename)
-                    file_data = file.read()
-                    zip_entries.append((filename, file_data))
+            # Check if any files were actually selected
+            if not files or files[0].filename == '':
+                if is_xhr:
+                    return jsonify({'success': False, 'error': 'No files selected'}), 400
+                flash('No files selected', 'error')
+                return redirect(request.url)
 
-            file_size = save_zip(zip_entries, saved_filename, app.config['UPLOAD_FOLDER'])
-            # compute checksum on the resulting zip file
-            with open(os.path.join(app.config['UPLOAD_FOLDER'], saved_filename), 'rb') as fobj:
-                checksum = compute_checksum(fobj)
-            flash(f'Created zip file with {len(files)} files', 'success')
-        
-        # Check if file was encrypted client-side
-        is_encrypted = request.form.get('is_encrypted', '0') == '1'
+            # Generate unique token
+            token = generate_token()
+            user_id = session.get('user_id')
 
-        # Save to database
-        db = get_db()
-        db.execute(
-            'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, checksum, salt, password_hash, is_encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            (saved_filename, original_filename, file_size, token, user_id, expiry_date, checksum, salt, password_hash, is_encrypted)
-        )
-        db.commit()
+            # Get expiration time and password
+            ALLOWED_EXPIRY_HOURS = {24, 168, 720}
+            try:
+                expiry_hours = int(request.form.get('expiry', 24))
+            except (ValueError, TypeError):
+                expiry_hours = 24
+            if expiry_hours not in ALLOWED_EXPIRY_HOURS:
+                expiry_hours = 24
+            expiry_date = datetime.now() + timedelta(hours=expiry_hours)
+            password = request.form.get('password', '').strip()
+            salt = None
+            password_hash = None
+            if password:
+                salt = base64.b64encode(os.urandom(32)).decode('utf-8')
+                password_hash = generate_password_hash(password + salt)
 
-        return redirect(url_for('upload_success', token=token))
-    
+            # If single file, save normally
+            if len(files) == 1:
+                file = files[0]
+
+                # Check if file type is allowed
+                if not allowed_file(file.filename) or not allowed_mime_type(file.mimetype):
+                    if is_xhr:
+                        return jsonify({'success': False, 'error': 'File type not allowed'}), 400
+                    flash('File type not allowed', 'error')
+                    return redirect(request.url)
+
+                original_filename = secure_filename(file.filename)
+                saved_filename = f"{token}_{original_filename}"
+
+                # compute checksum before saving (function resets file pointer)
+                checksum = compute_checksum(file)
+                file_size = save_file(file, saved_filename, app.config['UPLOAD_FOLDER'])
+
+            # If multiple files, create a zip
+            else:
+                # Create zip filename
+                original_filename = f"files_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+                saved_filename = f"{token}_{original_filename}"
+
+                # Collect files for zipping
+                zip_entries = []
+                for file in files:
+                    if file and file.filename:
+                        if not allowed_file(file.filename):
+                            continue
+                        filename = secure_filename(file.filename)
+                        file_data = file.read()
+                        zip_entries.append((filename, file_data))
+
+                file_size = save_zip(zip_entries, saved_filename, app.config['UPLOAD_FOLDER'])
+                # compute checksum on the resulting zip file
+                use_cloud = os.getenv('USE_CLOUD_STORAGE', 'false').lower() == 'true'
+                if use_cloud:
+                    from storage import _get_s3_client, _get_bucket
+                    client = _get_s3_client()
+                    bucket = _get_bucket()
+                    obj = client.get_object(Bucket=bucket, Key=saved_filename)
+                    checksum = hashlib.sha256(obj['Body'].read()).hexdigest()
+                else:
+                    with open(os.path.join(app.config['UPLOAD_FOLDER'], saved_filename), 'rb') as fobj:
+                        checksum = compute_checksum(fobj)
+
+            # Check if file was encrypted client-side
+            is_encrypted = request.form.get('is_encrypted', '0') == '1'
+
+            # Save to database
+            db = get_db()
+            db.execute(
+                'INSERT INTO files (filename, original_filename, file_size, share_token, user_id, expiry_date, checksum, salt, password_hash, is_encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                (saved_filename, original_filename, file_size, token, user_id, expiry_date, checksum, salt, password_hash, is_encrypted)
+            )
+            db.commit()
+
+            if is_xhr:
+                return jsonify({'success': True, 'redirect': url_for('upload_success', token=token)})
+            return redirect(url_for('upload_success', token=token))
+
+        except Exception as e:
+            app.logger.error(f'Upload error: {e}', exc_info=True)
+            if is_xhr:
+                return jsonify({'success': False, 'error': str(e)}), 500
+            flash(f'Upload failed: {str(e)}', 'error')
+            return redirect(request.url)
+
     return render_template('upload.html')
 
 @app.route('/success/<token>')
@@ -458,19 +522,27 @@ def download(token):
         return redirect(url_for('dashboard'))
     
     
+    # Password check for protected files (both encrypted and non-encrypted)
+    if file_info['password_hash'] and not file_info['is_encrypted']:
+        if request.method == 'GET':
+            return render_template('password_check.html', token=token, preview=False)
+        if request.method == 'POST':
+            entered_password = request.form.get('password', '')
+            salt = file_info['salt'] or ''
+            if not check_password_hash(file_info['password_hash'], entered_password + salt):
+                flash('Incorrect password', 'error')
+                return render_template('password_check.html', token=token, preview=False)
+
     # Verify file integrity before allowing download
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file_info['filename'])
     try:
-        with open(filepath, 'rb') as f:
-            file_checksum = compute_checksum(f)
-        if file_checksum != file_info['checksum']:
+        if not verify_file_checksum(file_info['filename'], file_info['checksum']):
             flash('File integrity check failed. The file may be corrupted.', 'error')
             return redirect(url_for('dashboard'))
     except Exception:
         flash('Error verifying file integrity.', 'error')
         return redirect(url_for('dashboard'))
-    
-    # Increment download countf
+
+    # Increment download count
     db.execute('UPDATE files SET download_count = download_count + 1 WHERE share_token = ?', (token,))
     db.commit()
 
@@ -894,12 +966,20 @@ def download_all():
     # Verify file integrity before adding to zip
     corrupted_files = []
     valid_files = []
-    
+
     for f in files:
-        filepath = os.path.join(upload_folder, f['filename'])
         try:
-            with open(filepath, 'rb') as file_obj:
-                file_checksum = compute_checksum(file_obj)
+            if use_cloud:
+                from storage import _get_s3_client, _get_bucket
+                client = _get_s3_client()
+                bucket = _get_bucket()
+                obj = client.get_object(Bucket=bucket, Key=f['filename'])
+                data = obj['Body'].read()
+                file_checksum = hashlib.sha256(data).hexdigest()
+            else:
+                filepath = os.path.join(upload_folder, f['filename'])
+                with open(filepath, 'rb') as file_obj:
+                    file_checksum = compute_checksum(file_obj)
             if file_checksum != f['checksum']:
                 corrupted_files.append(f['original_filename'])
             else:
@@ -1059,11 +1139,8 @@ def preview(token):
 
         return redirect(url_for('index'))
     
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file_info['filename'])
     try:
-        with open(filepath, 'rb') as f:
-            file_checksum = compute_checksum(f)
-        if file_checksum != file_info['checksum']:
+        if not verify_file_checksum(file_info['filename'], file_info['checksum']):
             flash('The file may be corrupted, and cannot be previewed.', 'error')
             return redirect(url_for('dashboard'))
     except Exception:

@@ -35,7 +35,7 @@
 {% if g.user %}
                 <div class="header-user">
                     {% if g.profile_picture %}
-                        <img src="{{ url_for('static', filename='profiles/' ~ g.profile_picture) }}"
+                        <img src="{{ url_for('serve_profile_picture', filename=g.profile_picture) }}"
                              class="header-avatar">
                     {% endif %}
                     <span class="header-username">{{ g.user }}</span>

@@ -192,7 +192,6 @@ document.querySelector('.upload-form').addEventListener('submit', async function
 
     try {
         const formData = new FormData();
-        let keyB64 = '';
 
         if (useEncryption) {
             // Update status to show encryption phase
@@ -268,18 +267,26 @@ document.querySelector('.upload-form').addEventListener('submit', async function
         });
 
         xhr.onload = function() {
-            if (xhr.status >= 200 && xhr.status < 400) {
-                if (useEncryption) {
-                    // Append encryption key as URL fragment
-                    window.location.href = xhr.responseURL + '#' + keyB64;
+            try {
+                const resp = JSON.parse(xhr.responseText);
+                if (resp.success && resp.redirect) {
+                    window.location.href = resp.redirect;
                 } else {
-                    window.location.href = xhr.responseURL;
+                    showToast(resp.error || 'Upload failed. Please try again.', 'error');
+                    submitBtn.disabled = false;
+                    progressContainer.classList.add('hidden');
+                    uploadForm.classList.remove('hidden');
                 }
-            } else {
-                showToast('Upload failed (status ' + xhr.status + '). Please try again.', 'error');
-                submitBtn.disabled = false;
-                progressContainer.classList.add('hidden');
-                uploadForm.classList.remove('hidden');
+            } catch (e) {
+                // Fallback for non-JSON responses
+                if (xhr.status >= 200 && xhr.status < 400) {
+                    window.location.href = xhr.responseURL || '/upload';
+                } else {
+                    showToast('Upload failed (status ' + xhr.status + '). Please try again.', 'error');
+                    submitBtn.disabled = false;
+                    progressContainer.classList.add('hidden');
+                    uploadForm.classList.remove('hidden');
+                }
             }
         };
 

@@ -31,18 +31,14 @@
     <h2 class="mt-3">Or scan QR code:</h2>
     <div class="qr-container-wrapper">
     <div class="qr-container">
-        {% if file_info.is_encrypted %}
-        <canvas id="qrCanvas"></canvas>
-        {% else %}
         <img src="{{ qr_code }}" alt="QR Code" class="qr-image">
-        {% endif %}
         <p class="text-sm text-muted mt-1">Scan with your phone to download</p>
     </div>
     </div>
 
     {% if file_info.is_encrypted %}
     <div class="warning-banner">
-        <p><strong>Important:</strong> This file is end-to-end encrypted. The decryption key is embedded in the link above. Save this link — the key cannot be recovered if lost.</p>
+        <p><strong>Important:</strong> This file is end-to-end encrypted. You will need the password to decrypt it when downloading.</p>
     </div>
     {% endif %}
 
@@ -60,27 +56,7 @@
 {% endblock %}
 
 {% block scripts %}
-{% if file_info.is_encrypted %}
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-{% endif %}
 <script>
-    // If encrypted, append the key fragment to the share link
-    (function() {
-        const keyFragment = window.location.hash;
-        if (keyFragment && keyFragment.length > 1) {
-            const shareLink = document.getElementById('shareLink');
-            shareLink.textContent = shareLink.textContent + keyFragment;
-
-            // Generate QR code client-side with the full URL (including key)
-            const qrCanvas = document.getElementById('qrCanvas');
-            if (qrCanvas && typeof QRCode !== 'undefined') {
-                QRCode.toCanvas(qrCanvas, shareLink.textContent, { width: 250 }, function(err) {
-                    if (err) console.error('QR generation error:', err);
-                });
-            }
-        }
-    })();
-
     function copyLink() {
         const linkText = document.getElementById('shareLink').textContent;
         navigator.clipboard.writeText(linkText).then(() => {
