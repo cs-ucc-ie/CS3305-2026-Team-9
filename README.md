@@ -5,7 +5,7 @@ A secure file-sharing web application built with Flask. Upload files, generate s
 ## Features
 
 - **File Sharing** — Upload files, get a shareable link and QR code. Set expiry times (24h, 7d, 30d).
-- **End-to-End Encryption** — Optional password-based encryption (AES-256-GCM, PBKDF2) performed client-side before upload.
+- **End-to-End Encryption** — Optional password-based encryption (PBKDF2) performed client-side before upload.
 - **Password Protection** — Optionally require a password to download files.
 - **Social Features** — Add friends, share files directly, and chat in real time.
 - **Cloud Storage** — Store files locally or on Cloudflare R2.
