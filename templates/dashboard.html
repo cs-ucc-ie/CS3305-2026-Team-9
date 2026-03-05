@@ -366,10 +366,22 @@
         <ul class="shared-list">
             {% for file in shared_with_me %}
                 <li>
-                    <strong>{{ file.original_filename }}</strong>
-                    <em>(from {{ file.sender_id }})</em>
-                    -
-                    <a href="{{ url_for('download', token=file.share_token) }}">Download</a>
+                    <div class="shared-file-meta">
+                        <strong>{{ file.original_filename }}</strong>
+                        <em>(from {{ file.sender_id }})</em>
+                    </div>
+                    <div class="hamburger-menu">
+                        <button class="hamburger-btn" onclick="toggleMenu(event, 'grid-shared-{{ file.share_token }}')" title="Actions">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </button>
+                        <div class="menu-dropdown" id="grid-shared-{{ file.share_token }}">
+                            <a href="{{ url_for('preview', token=file.share_token) }}" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>Preview</a>
+                            <a href="{{ url_for('download', token=file.share_token) }}" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg></span>Download</a>
+                            <button onclick="copyShareLink('{{ request.url_root }}download/{{ file.share_token }}'); closeAllMenus();" class="menu-item"><span class="menu-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L10 5"></path><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L14 19"></path></svg></span>Copy Link</button>
+                        </div>
+                    </div>
                 </li>
             {% endfor %}
         </ul>
