@@ -2748,13 +2748,23 @@ form * {
   }
 
   .file-table tbody tr {
-    padding: 12px 0;
-    margin-bottom: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--overlay-light-2);
+    height: auto;
   }
 
   .file-table td {
-    padding: 4px 12px;
+    padding: 6px 0;
     text-align: left;
+    height: auto;
+    border: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
   }
 
   .file-table td:before {
@@ -2763,11 +2773,34 @@ form * {
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    content: "";
+    flex-shrink: 0;
+  }
+
+  .file-table td:nth-child(1):before { content: "Filename"; }
+  .file-table td:nth-child(2):before { content: "Size"; }
+  .file-table td:nth-child(3):before { content: "Uploaded"; }
+  .file-table td:nth-child(4):before { content: "Expires"; }
+  .file-table td:nth-child(5):before { content: "Downloads"; }
+  .file-table td:nth-child(6):before { content: "Status"; }
+  .file-table td:nth-child(7):before { content: "Actions"; }
+
+  .file-table td:last-child {
+    width: 100%;
+    padding: 6px 0;
+  }
+
+  .file-table td:last-child .hamburger-menu {
+    margin-left: auto;
+  }
+
+  .file-table td strong {
+    overflow-wrap: anywhere;
   }
 
   /* Grid view responsive */
   .file-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .dashboard-layout.files-main .file-grid {
