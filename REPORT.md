@@ -2,7 +2,7 @@
 
 ## CS3305 Team Software Project -- Team 9
 
-**Jamie O Donovan** -- Student Number: *[INSERT]*\
+**Jamie O'Donovan** -- Student Number: 121776739
 **Luka Nergadze** -- Student Number: *[INSERT]*\
 **Dylan Bennett** -- Student Number: 123346983
 **Robin Dowd** -- Student Number: *[INSERT]*
@@ -21,7 +21,7 @@ UCC's policy on academic integrity and confirm that this submission complies
 with it.
 
 Signed:\
-Jamie O Donovan\
+Jamie O'Donovan\
 Luka Nergadze\
 Dylan Bennett\
 Robin Dowd
@@ -787,6 +787,7 @@ Claude Code also assisted with:
 - Rewriting the encrypted file preview logic when we migrated from URL-fragment
   key distribution to password-based PBKDF2 key derivation.
 - Reviewing the codebase for submission readiness and identifying dead code.
+- Identifying and resolving CSS inconsistencies across the interface.
 
 All AI-generated code was reviewed and tested by team members before being
 merged. The report was written by the team members by hand.
@@ -858,9 +859,27 @@ click. A JavaScript polling loop runs to check for new notifications and
 update the badge count, with a toast popup appearing immediately when something
 new arrives.
 
-### Jamie O Donovan
+### Jamie O'Donovan
 
-*[TO BE FILLED IN BY JAMIE]*
+My primary contribution to the development of ShareLink was the frontend user experience. 
+I initially implemented this using Tailwind CSS, but determined it was more of a time sink than
+it was worth, and moved forward without a frontend or CSS framework. From there, I improved 
+the UX using vanilla JavaScript and CSS, with a focus on responsiveness — ensuring
+the webapp adapts seamlessly across a range of display resolutions. The stylesheet is organised
+into discrete sections (themes, header, cards, forms, buttons, page-specific blocks,responsive
+tweaks, chat, and toasts), functioning as a single source of truth for the webapp's visual design. 
+UX states are managed through class toggles such as `hidden`, `show`, and status modifier classes,
+rather than relying on component libraries.
+
+The key UX behaviours I implemented include:
+- Consistent styling across pages (border radius, button sizing, etc.)
+- Grid/list toggle for file views
+- Default and compact dashboard layout options
+- A hamburger menu replacing inline action buttons to conserve space on the dashboard
+- An expansion of the theme selector originally implemented by Robin
+
+I also contributed minor fixes when encountering logic errors during development, and added
+error pages for standard HTTP responses (403, 404, etc.).
 
 ### Robin Dowd
 
