@@ -504,22 +504,19 @@ def upload_success(token):
     return render_template('success.html', file_info=file_info, token=token, qr_code=qr_code)
 
 @app.route('/download/<token>', methods=['GET', 'POST'])
-@login_required
 def download(token):
     db = get_db()
     file_info = db.execute('SELECT * FROM files WHERE share_token = ?', (token,)).fetchone()
     
     if file_info is None:
         flash('File not found or link expired', 'error')
-
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('index'))
     
     # Check if link has expired
     expiry_date = datetime.fromisoformat(file_info['expiry_date'])
     if datetime.now() > expiry_date:
         flash('This link has expired', 'error')
-
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('index'))
     
     
     # Password check for protected files (both encrypted and non-encrypted)
@@ -537,10 +534,10 @@ def download(token):
     try:
         if not verify_file_checksum(file_info['filename'], file_info['checksum']):
             flash('File integrity check failed. The file may be corrupted.', 'error')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('index'))
     except Exception:
         flash('Error verifying file integrity.', 'error')
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('index'))
 
     # Increment download count
     db.execute('UPDATE files SET download_count = download_count + 1 WHERE share_token = ?', (token,))
