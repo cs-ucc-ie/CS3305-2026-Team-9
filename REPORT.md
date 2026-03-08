@@ -3,7 +3,7 @@
 ## CS3305 Team Software Project -- Team 9
 
 **Jamie O'Donovan** -- Student Number: 121776739
-**Luka Nergadze** -- Student Number: *[INSERT]*\
+**Luka Nergadze** -- Student Number: 122421516
 **Dylan Bennett** -- Student Number: 123346983
 **Robin Dowd** -- Student Number: 123446296
 
