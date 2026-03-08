@@ -883,7 +883,11 @@ error pages for standard HTTP responses (403, 404, etc.).
 
 ### Robin Dowd
 
-*[TO BE FILLED IN BY ROBIN]*
+My primary contributions to the project revolved around the security of users files. Our End to End encryption system originally used AES-GCM, placing the code in the shared link to decrypt, however, once we expanded to being able to send files directly, this was no longer sufficient. Instead, we implemented PBKDF2, basing the encryption on the password placed on a file.
+
+I also ensured that passwords and other sensitive data were stored as securely as possible. Passwords are hashed and encrypted, held to minimum standards, and our user input sections are protected from SQL Injection. 
+
+I also expanded the theme selector from just Light and Dark, to having several other themes with room to easily add more.
 
 \newpage
 
