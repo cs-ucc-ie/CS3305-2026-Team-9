@@ -790,7 +790,7 @@ Claude Code also assisted with:
 - Identifying and resolving CSS inconsistencies across the interface.
 
 All AI-generated code was reviewed and tested by team members before being
-merged. The report was written by the team members by hand.
+merged. Claude AI was used to write the framework of the report, this outline was then review by team members and modified to fit within our project needs.
 
 \newpage
 
@@ -798,11 +798,36 @@ merged. The report was written by the team members by hand.
 
 ### Dylan Bennett
 
-I built a lot of the core features of the application: the initial file upload
-and download routes, the SQLite database schema, and the Flask application
+I built the core backend of the application: the initial file upload and
+download routes, the SQLite database schema, and the Flask application
 structure. From there I added features incrementally -- link expiration with
 selectable durations, the user dashboard, and file management operations
-(delete, rename, download all as ZIP).
+(delete, rename, download all as ZIP). I also built the drag-and-drop upload
+UI with real-time progress tracking (percentage, speed, and uploaded size) and
+added multi-file upload support where selecting multiple files bundles them
+into a single ZIP archive server-side.
+
+I implemented the file preview system, which supports inline previews for
+images, PDFs, video, and audio files. For encrypted files, the preview page
+decrypts the file client-side before rendering it in the appropriate HTML
+element. I also added login rate limiting to prevent brute-force attacks and
+password complexity rules to enforce strong passwords.
+
+I built the real-time chat system: a floating chat widget available on every
+page, backed by four JSON API endpoints and a 307-line `chat.js` module that
+polls for new messages every three seconds using incremental fetching. Users
+can send text messages and share files directly through the chat. I also
+implemented group file sharing, replacing the single-friend dropdown with a
+multi-select checkbox list so users can share a file with several friends in
+one action, with duplicate-share detection.
+
+I built the admin dashboard, which displays system-wide statistics (total
+users, files, downloads, storage used, encrypted file count), a top-ten
+uploaders table, the twenty most recent uploads, and user management with
+the ability to promote or demote admins. I also implemented the automatic
+expired file cleanup system, which runs as a `before_request` hook at most
+once per hour, deleting expired files from storage and cascading the removal
+through related database tables.
 
 I added cloud storage support through Cloudflare R2, implementing the
 `storage.py` abstraction that lets the app switch between local and cloud
