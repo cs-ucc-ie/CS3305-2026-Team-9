@@ -2,9 +2,9 @@
 
 ## CS3305 Team Software Project -- Team 9
 
-**Jamie O'Donovan** -- Student Number: 121776739
-**Luka Nergadze** -- Student Number: 122421516
-**Dylan Bennett** -- Student Number: 123346983
+**Jamie O'Donovan** -- Student Number: 121776739\
+**Luka Nergadze** -- Student Number: 122421516\
+**Dylan Bennett** -- Student Number: 123346983\
 **Robin Dowd** -- Student Number: 123446296
 
 GitHub: <https://github.com/cs-ucc-ie/CS3305-2026-Team-9>
@@ -29,22 +29,6 @@ Robin Dowd
 ---
 
 \newpage
-
-## Table of Contents
-
-1. [The Problem](#1-the-problem)
-2. [Existing Solutions and Their Gaps](#2-existing-solutions-and-their-gaps)
-3. [Architecture Overview](#3-architecture-overview)
-4. [The Backend: Flask in Depth](#4-the-backend-flask-in-depth)
-5. [Social Features: Friends and Chat](#5-social-features-friends-and-chat)
-6. [The Frontend: Themes and Templates](#6-the-frontend-themes-and-templates)
-7. [The Desktop Shell: Electron and PyInstaller](#7-the-desktop-shell-electron-and-pyinstaller)
-8. [Administration](#8-administration)
-9. [Deployment](#9-deployment)
-10. [Error Handling](#10-error-handling)
-11. [Lessons Learned](#11-lessons-learned)
-12. [Use of Generative AI](#12-use-of-generative-ai)
-13. [Contributions](#13-contributions)
 
 \newpage
 
